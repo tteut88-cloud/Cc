@@ -825,11 +825,15 @@ const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(|NAVER|Line\/|DaumApps|ever
 const IS_KAKAO = /KAKAOTALK/i.test(UA);
 const IS_IOS = /iPhone|iPad|iPod/i.test(UA);
 const IS_STANDALONE = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const NO_GOOGLE = IS_STANDALONE && IS_IOS && !(window.nneowCloud && window.nneowCloud.sameOriginAuth); // 아이폰 웹앱에서는 구글 로그인 창이 열리지 않음
 function loginHelpHTML() {
   if (IN_APP) return `<div class="warn-box"><b>${IS_KAKAO ? '카카오톡' : '앱'} 안의 브라우저로 열려 있어요</b>
     <span>여기서는 구글 로그인이 막혀 있어요. 외부 브라우저(${IS_IOS ? 'Safari' : 'Chrome'})로 열거나, 아래 <b>이메일로 시작</b>을 써주세요.</span>
     <button class="btn block" data-act="openExternal">${IS_IOS ? 'Safari' : 'Chrome'}로 열기</button></div>`;
-  if (IS_STANDALONE && IS_IOS) return `<div class="warn-box"><b>홈 화면 앱은 Safari와 따로 로그인해요</b><span>Safari에서 쓰던 <b>같은 이메일 + 비밀번호</b>로 아래에서 로그인하면 상대와 바로 이어져요. 구글로 가입했다면 Safari의 nneow → 설정 → 상대 휴대폰과 연결에서 먼저 <b>비밀번호 만들기</b>를 해주세요.</span></div>`;
+  if (IS_STANDALONE && IS_IOS) return `<div class="warn-box"><b>웹앱은 Safari와 따로 한 번 로그인해요</b>
+    <span>① Safari에서 <b>이메일</b>로 가입했다면 → 아래에 같은 이메일·비밀번호를 넣으면 상대와 바로 이어져요.</span>
+    <span>② Safari에서 <b>구글</b>로 가입했다면 → Safari의 nneow → 설정 → 상대 휴대폰과 연결에서 <b>비밀번호 만들기</b>를 한 번 하고, 여기서 구글 이메일 + 그 비밀번호로 로그인해요.</span>
+    <span>③ 처음이라면 → 아래에서 이메일로 시작하고 초대 코드로 연결해요.</span></div>`;
   return '';
 }
 const emailFormHTML = () => `<div class="pair-box"><b>이메일로 시작</b><span>어디서나 되는 방법이에요. 처음이면 자동으로 가입돼요. (비밀번호 6자 이상)</span>
@@ -844,7 +848,7 @@ SCREENS.pair = () => {
   } else if (CLOUD && c.status === 'signed-out') {
     body = `<div class="pair-hero">${ICON.lock}<b>로그인이 풀렸어요</b><span>연결했던 계정으로 다시 로그인해 주세요</span></div>
       ${loginHelpHTML()}
-      <div class="pair-actions">${IN_APP ? '' : '<button class="btn block" data-act="loginGoogle">구글로 로그인</button>'}</div>
+      <div class="pair-actions">${IN_APP || NO_GOOGLE ? '' : '<button class="btn block" data-act="loginGoogle">구글로 로그인</button>'}</div>
       ${emailFormHTML()}
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
   } else if (CLOUD && c.members < 2 && CLOUD.role === 'a') {
@@ -863,7 +867,7 @@ SCREENS.pair = () => {
   } else if (CLOUD) {
     body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
       <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
-      ${c.user && c.user.email && !c.hasPassword ? `<div class="pair-box"><b>홈 화면 앱에서도 쓰려면</b><span>아이폰 홈 화면 앱에서는 구글 로그인이 안 될 수 있어요. 비밀번호를 만들어 두면 홈 화면 앱에서 <b>${esc(c.user.email)}</b> + 비밀번호로 로그인해 바로 이어져요.</span>
+      ${c.user && c.user.email && !c.hasPassword ? `<div class="pair-box"><b>웹앱(홈 화면 앱)에서도 쓰려면</b><span>아이폰 웹앱에서는 구글 로그인 창이 열리지 않아요. 여기서 비밀번호를 만들어 두면, 웹앱에서 <b>${esc(c.user.email)}</b> + 비밀번호로 로그인해 바로 이어져요.</span>
         <input id="pw-new" type="password" autocomplete="new-password" placeholder="비밀번호 (6자 이상)" /><button class="btn block" data-act="addPassword">비밀번호 만들기</button></div>` : ''}
       <ul class="menu"><li><button data-act="editNames">이름 바꾸기${ICON.right}</button></li></ul>
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>
@@ -882,7 +886,7 @@ SCREENS.pair = () => {
     body = `<div class="pair-hero"><img src="assets/icons/logo.png" alt="" class="pair-logo" /><b>상대 휴대폰과 연결하기</b>
       <span>로그인하고 초대 코드로 연결하면<br/>두 사람의 휴대폰이 실시간으로 공유돼요</span></div>
       ${loginHelpHTML()}
-      ${IN_APP ? '' : '<div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button></div>'}
+      ${IN_APP || NO_GOOGLE ? '' : '<div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button></div>'}
       ${emailFormHTML()}
       <p class="note">휴대폰을 바꿔도 같은 구글 계정 / 이메일로 로그인하면 그대로 이어져요.</p>`;
   }
@@ -905,7 +909,7 @@ async function cloudTry(fn, okMsg) {
       'auth/network-request-failed': '인터넷 연결을 확인해 주세요',
       'auth/invalid-email': '이메일 주소를 확인해 주세요',
       'auth/weak-password': '비밀번호는 6자 이상이어야 해요',
-      'auth/wrong-password': '비밀번호가 맞지 않아요',
+      'auth/wrong-password': '비밀번호가 맞지 않아요. 구글로 가입한 이메일이라면 Safari의 nneow에서 먼저 ‘비밀번호 만들기’를 해주세요',
       'auth/too-many-requests': '시도가 너무 많아요. 잠시 후 다시 해주세요',
       'auth/internal-error': '로그인 창을 열지 못했어요. 이메일로 시작을 써주세요',
       'auth/requires-recent-login': '보안을 위해 한 번 로그아웃 후 다시 로그인하고 시도해 주세요',
@@ -1023,8 +1027,8 @@ function eventSheet(ev) {
     <div class="field"><div class="seg" id="e-type">
       <button data-v="schedule" class="${e.type === 'schedule' ? 'on' : ''}">일정</button><button data-v="plan" class="${e.type === 'plan' ? 'on' : ''}">계획</button></div></div>
     <div class="switch-row">하루 종일<button class="switch ${e.allDay ? 'on' : ''}" id="e-allday"></button></div>
-    <div class="row2 field"><div><label>시작일</label><input type="date" id="e-start" value="${e.start}" /></div><div><label>종료일</label><input type="date" id="e-end" value="${e.end}" /></div></div>
-    <div class="row2 field" id="e-times" style="${e.allDay ? 'display:none' : ''}"><div><label>시작</label><input type="time" id="e-st" value="${e.startTime || '09:00'}" /></div><div><label>종료</label><input type="time" id="e-et" value="${e.endTime || '10:00'}" /></div></div>
+    <div class="date-row"><span>시작일</span><input type="date" id="e-start" class="date-pill" value="${e.start}" /></div><div class="date-row"><span>종료일</span><input type="date" id="e-end" class="date-pill" value="${e.end}" /></div>
+    <div id="e-times" style="${e.allDay ? 'display:none' : ''}"><div class="date-row"><span>시작 시간</span><input type="time" id="e-st" class="date-pill" value="${e.startTime || '09:00'}" /></div><div class="date-row"><span>종료 시간</span><input type="time" id="e-et" class="date-pill" value="${e.endTime || '10:00'}" /></div></div>
     <div class="switch-row">${esc(you().name)}와 공유<button class="switch ${e.shared ? 'on' : ''}" id="e-shared"></button></div>
     <div class="switch-row"><span>◢ 데드라인 <small style="color:var(--muted);font-weight:500">(마지막 날에 표시)</small></span><button class="switch ${e.deadline ? 'on' : ''}" id="e-deadline"></button></div>
     <div class="field"><label>메모</label><textarea id="e-memo" rows="3" placeholder="이 일정에 남길 메모">${esc(e.memo)}</textarea></div>
@@ -1102,7 +1106,7 @@ function memoCompose(opts = {}) {
   };
   openSheet(`
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m ? '메모 수정' : '메모'}</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
-    ${m && m.chat ? '' : `<div class="field"><label>날짜</label><input type="date" id="m-date" value="${date}" /></div>`}
+    ${m && m.chat ? '' : `<div class="date-row"><span>날짜</span><input type="date" id="m-date" class="date-pill" value="${date}" /></div>`}
     <div class="field"><textarea id="m-text" class="memo-big-input" placeholder="메모를 남겨보세요">${esc(m ? m.text : (opts.text || ''))}</textarea></div>
     <div class="switch-row">상대방에게 보내기<button class="switch ${(m ? m.toPartner : S.memoSend) ? 'on' : ''}" id="m-send"></button></div>
     <button type="button" class="memo-photo" id="m-photo"></button>
@@ -1185,7 +1189,7 @@ async function addPhotos(files, date, onCal = false) {
 function photoInfoSheet(items, date = todayStr(), onCal = false) {
   openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${items.length > 1 ? `사진 ${items.length}장` : '사진'} 올리기</h3><button class="icon-btn" data-act="phSave">${ICON.check}</button></div>
     <div class="ph-preview">${items.map((x) => `<img src="${x.img}" alt="" />`).join('')}</div>
-    <div class="field"><label>날짜</label><input type="date" id="ph-date" value="${date}" /></div>
+    <div class="date-row"><span>날짜</span><input type="date" id="ph-date" class="date-pill" value="${date}" /></div>
     <div class="field"><label>메모</label><textarea id="ph-cap" rows="2" placeholder="사진에 남길 메모 (선택)"></textarea></div>
     <div class="switch-row">달력에도 붙이기<button class="switch ${onCal ? 'on' : ''}" id="ph-cal"></button></div>
     <p class="note" style="padding:0">사진은 공유 갤러리에 올라가요. ‘달력에도 붙이기’를 켜면 그 날짜 달력(사진 보기)에도 보여요.</p>`, { bind: (sh) => { $('#ph-cal', sh).onclick = (e) => e.currentTarget.classList.toggle('on'); } });
@@ -1209,7 +1213,7 @@ function photoViewer(g) {
     </div>
     <div class="lbl-sm">메모</div>
     ${mine ? `<div class="field"><textarea id="g-cap" rows="2" placeholder="이 사진에 메모 남기기">${esc(g.caption || '')}</textarea></div>
-      <div class="field"><label>날짜</label><input type="date" id="g-date" value="${g.date}" /></div>`
+      <div class="date-row"><span>날짜</span><input type="date" id="g-date" class="date-pill" value="${g.date}" /></div>`
       : (g.caption ? `<div class="detail-memo">${esc(g.caption)}</div>` : '<div class="empty" style="padding:8px 0">사진 메모가 없어요</div>')}
     ${dayMemos.length ? `<div class="lbl-sm">이 날의 메모</div>${dayMemos.map((m) => `<div class="detail-memo">${esc(m.text) || '사진'}<div class="s" style="font-size:.75em;color:var(--muted);margin-top:4px">${esc(whoName(m.owner))}</div></div>`).join('')}` : ''}
     ${mine ? `<div class="switch-row">달력에도 붙이기<button class="switch ${g.onCal ? 'on' : ''}" id="g-cal"></button></div>

@@ -645,3 +645,17 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .mv-text { font-size: 1.22em; line-height: 32px; white-space: pre-wrap; word-break: break-word; }
 .mv-text.you { font-weight: 600; }
 #toast .stk { width: 22px; height: 22px; flex-shrink: 0; }
+
+/* 날짜: 다른 줄과 같은 높이 · 같은 폭의 한 줄 */
+.date-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; font-weight: 600; }
+.date-pill { width: 168px; flex: 0 0 168px; height: 40px; padding: 0 12px; border-radius: 10px; font-size: .95em; font-weight: 600; text-align: center; -webkit-appearance: none; appearance: none; }
+.date-pill::-webkit-date-and-time-value { text-align: center; }
+.date-pill::-webkit-calendar-picker-indicator { margin-left: 4px; }
+
+/* 스마일로 사진↔일정 바꿔도 칸 크기 · 숫자 크기 그대로 */
+.cell.pmode { padding-top: 10px; }
+.cell.pmode .num-wrap { height: 30px; }
+.cell.pmode .num { font-size: 1.22em; }
+.cell.pmode .memo-bar { top: 41px; }
+.cell.pmode .cell-photo-wrap { margin-top: 9px; }
+.warn-box span + span { margin-top: 2px; }

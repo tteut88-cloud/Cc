@@ -14,6 +14,10 @@ const CONFIG = {
   appId: '1:89386576660:web:1e9fe60a53f50a4bc43001',
   measurementId: 'G-62DG7T6JZD',
 };
+// Firebase Hosting(meow-ced8f.web.app 등)에서 열면 로그인 처리 주소를 같은 주소로 → 웹앱에서도 구글 로그인 가능
+const SAME_ORIGIN_AUTH = /(^|\.)(meow-ced8f\.web\.app|meow-ced8f\.firebaseapp\.com)$/.test(location.hostname);
+if (SAME_ORIGIN_AUTH) CONFIG.authDomain = location.hostname;
+const IS_STANDALONE_APP = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 const LS = 'nneow.cloud';
 const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes'];
 
@@ -131,6 +135,7 @@ function subscribe(cid) {
 async function signInGoogle() {
   init();
   const p = new firebase.auth.GoogleAuthProvider();
+  if (IS_STANDALONE_APP && SAME_ORIGIN_AUTH) { await auth.signInWithRedirect(p); return; } // 웹앱: 같은 주소로 다녀오기
   try { await auth.signInWithPopup(p); }
   catch (e) {
     if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(e.code)) await auth.signInWithRedirect(p);
@@ -278,6 +283,7 @@ function start(h) {
 window.nneowCloud = {
   available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, joinCouple, changeCode, disconnect,
   addPassword,
+  sameOriginAuth: SAME_ORIGIN_AUTH,
   get hasPassword() { const u = auth && auth.currentUser; return !!(u && (st.pwSet || u.providerData.some((p) => p.providerId === 'password'))); },
   get code() { const c = info(); return st.code || (c && c.code) || ''; },
   get email() { return (auth && auth.currentUser && auth.currentUser.email) || ''; },
