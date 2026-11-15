@@ -617,3 +617,31 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .prog-list .todo { padding: 8px 0; }
 .prog-list .chk { width: 22px; height: 22px; }
 .prog-list .txt { font-size: 1em; }
+
+/* ===== v12 ===== */
+/* 달력: 항상 6줄, 줄 높이 고정 → 달마다 크기가 변하지 않음 */
+.grid { display: grid; grid-template-rows: repeat(6, minmax(0, 1fr)); }
+.week { min-height: 0; overflow: hidden; }
+/* 스티커 붙이기 안내: 달력을 밀어내지 않게 위에 띄움 */
+.place-hint { position: absolute; top: calc(env(safe-area-inset-top) + 66px); left: 50%; transform: translateX(-50%); margin: 0; z-index: 8; box-shadow: var(--shadow); background: var(--surface); white-space: nowrap; }
+/* 스티커: 누른 자리 그대로 */
+.cell-stk, .cell-stk.on-photo { bottom: auto; right: auto; width: 26px; height: 26px; transform: translate(-50%, -50%) rotate(-8deg); z-index: 2; }
+.face-grid .stk-btn .stk { width: 46px; height: 46px; }
+
+/* 메모 작성: 큰 글 칸 + 아래 사진 추가 */
+.memo-big-input { min-height: 36dvh; font-size: 1.02em; line-height: 1.6; }
+.memo-photo { width: 100%; margin-top: 6px; border: 1.5px dashed var(--line-strong); border-radius: 14px; padding: 14px; display: flex; justify-content: center; position: relative; color: var(--muted); }
+.memo-photo .mp-add { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .92em; }
+.memo-photo .mp-add .ico { width: 22px; height: 22px; }
+.memo-photo.has { padding: 0; border-style: solid; overflow: hidden; }
+.memo-photo img { width: 100%; max-height: 240px; object-fit: cover; display: block; }
+.memo-photo .rm { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.95); color: #111; display: grid; place-items: center; }
+.memo-photo .rm .ico { width: 15px; height: 15px; stroke-width: 2.6; }
+
+/* 메모 크게 보기 (메모장) */
+.memo-view { padding: 22px 22px 40px; }
+.mv-meta { font-size: .78em; color: var(--muted); margin-bottom: 14px; }
+.mv-img { display: block; width: 100%; border-radius: 14px; margin-bottom: 16px; }
+.mv-text { font-size: 1.22em; line-height: 32px; white-space: pre-wrap; word-break: break-word; }
+.mv-text.you { font-weight: 600; }
+#toast .stk { width: 22px; height: 22px; flex-shrink: 0; }

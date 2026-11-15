@@ -137,6 +137,19 @@ async function signInGoogle() {
     else throw e;
   }
 }
+/* 구글로 가입한 계정에 비밀번호 추가 → 아이폰 홈 화면 앱(구글 로그인 창이 안 뜸)에서도 이메일로 로그인 가능 */
+async function addPassword(pw) {
+  const u = auth.currentUser; if (!u || !u.email) throw new Error('로그인이 필요해요');
+  try { await u.linkWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, pw)); }
+  catch (e) {
+    // 같은 이메일이 이미 이 계정에 묶여 있다고 나오는 경우 → 비밀번호만 설정
+    if (e.code === 'auth/email-already-in-use' || e.code === 'auth/credential-already-in-use') await u.updatePassword(pw);
+    else throw e;
+  }
+  await u.reload().catch(() => {});
+  st.pwSet = true;
+  if (hooks) hooks.onStatus();
+}
 async function signInAnon() { init(); await auth.signInAnonymously(); }
 /* 이메일 로그인: 카카오톡 안 브라우저, 홈 화면 앱 등 구글 로그인 창이 안 뜨는 곳에서도 동작. 계정이 없으면 새로 만듦 */
 async function signInEmail(email, pw) {
@@ -264,6 +277,8 @@ function start(h) {
 
 window.nneowCloud = {
   available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, joinCouple, changeCode, disconnect,
+  addPassword,
+  get hasPassword() { const u = auth && auth.currentUser; return !!(u && (st.pwSet || u.providerData.some((p) => p.providerId === 'password'))); },
   get code() { const c = info(); return st.code || (c && c.code) || ''; },
   get email() { return (auth && auth.currentUser && auth.currentUser.email) || ''; },
   get status() { return st.status; },

@@ -351,14 +351,14 @@ applyPrefs();
 function go(screen, opts = {}) {
   Object.assign(S, opts);
   S.screen = screen;
-  history.pushState({ screen, sel: S.sel }, '');
+  history.pushState({ screen, sel: S.sel, memoId: S.memoId }, '');
   render(true);
 }
 function back() { history.back(); }
 window.addEventListener('popstate', (e) => {
   closeSheet();
   const st = e.state || { screen: 'list' };
-  S.screen = st.screen; if (st.sel) S.sel = st.sel;
+  S.screen = st.screen; if (st.sel) S.sel = st.sel; if (st.memoId) S.memoId = st.memoId;
   S.rangeStart = null;
   render(true);
 });
@@ -434,7 +434,7 @@ SCREENS.month = () => {
   const first = new Date(y, m, 1);
   const start = ymd(new Date(y, m, 1 - first.getDay()));
   const daysIn = new Date(y, m + 1, 0).getDate();
-  const weeks = Math.ceil((first.getDay() + daysIn) / 7);
+  const weeks = 6; // 달마다 높이가 달라지지 않게 항상 6줄
   const evs = visibleEvents();
   const owner = S.viewPartner ? YOU : ME;
   const t = todayStr();
@@ -462,7 +462,7 @@ SCREENS.month = () => {
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol && !out ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
           ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" />${subPhoto ? `<img class="cell-photo-sub" src="${subPhoto.img}" alt="" />` : ''}${phs.length > 1 && !subPhoto ? `<span class="cell-photo-n">${phs.length}</span>` : ''}</div>` : ''}
-          ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
+          ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}" style="left:${Math.round((stk.x ?? 0.5) * 100)}%;top:${Math.round((stk.y ?? 0.78) * 100)}%">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${!out && dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
     }
@@ -502,7 +502,7 @@ SCREENS.month = () => {
       <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button>
       <button class="icon-btn" data-act="toSearch" aria-label="검색">${ICON.search}</button>
     </header>
-    ${S.placing ? `<div class="place-hint">${STICKERS[S.placing].svg}<span>붙일 날짜를 눌러주세요</span><button data-act="cancelPlace">취소</button></div>` : ''}
+    ${S.placing ? `<div class="place-hint">${STICKERS[S.placing].svg}<span>붙이고 싶은 자리를 눌러주세요</span><button data-act="cancelPlace">취소</button></div>` : ''}
     <div class="weekdays">${WD.map((d, i) => `<span class="${i === 0 ? 'sun' : ''}">${d}</span>`).join('')}</div>
     <div class="grid" id="grid">${html}</div>
     <nav class="bottombar">
@@ -727,7 +727,24 @@ after.memo = () => {
 };
 let swallowClick = false;
 
-/* 메모 크게 보기 */
+/* 메모 크게 보기 (메모장 화면) */
+SCREENS.memoView = () => {
+  const m = db.memos.find((x) => x.id === S.memoId);
+  if (!m) return `<section class="screen">${topbar('메모')}<div class="empty">메모가 없어요</div></section>`;
+  const mine = m.owner === ME;
+  return `<section class="screen">
+    ${topbar(m.chat ? '나눈 메모' : fmtDate(m.date), mine ? '<button class="poke-btn" data-act="memoViewEdit">수정</button>' : '')}
+    <div class="scroll pad memo-view">
+      <div class="mv-meta">${esc(whoName(m.owner))} · ${fmtDate(ymd(new Date(m.createdAt)))} ${clockLabel(m.createdAt)}${!m.toPartner ? ' · 나만 보기' : ''}${m.editedAt ? ' · 수정됨' : ''}</div>
+      ${quoteHTML(m.replyTo)}
+      ${m.image ? `<img class="mv-img" src="${m.image}" alt="" />` : ''}
+      ${m.text ? `<div class="mv-text ${mine ? 'me' : 'you'}">${esc(m.text)}</div>` : ''}
+      ${mine ? '<button class="btn danger block" data-act="memoViewDelete" style="margin-top:30px">메모 삭제</button>' : ''}
+    </div>
+  </section>`;
+};
+
+/* 메모 크게 보기 (시트) */
 function memoDetail(m) {
   const mine = m.owner === ME;
   openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m.chat ? '나눈 메모' : fmtDate(m.date) + ' 메모'}</h3>${mine ? '<button class="icon-btn" data-act="memoEditOpen">수정</button>' : '<span></span>'}</div>
@@ -812,7 +829,7 @@ function loginHelpHTML() {
   if (IN_APP) return `<div class="warn-box"><b>${IS_KAKAO ? '카카오톡' : '앱'} 안의 브라우저로 열려 있어요</b>
     <span>여기서는 구글 로그인이 막혀 있어요. 외부 브라우저(${IS_IOS ? 'Safari' : 'Chrome'})로 열거나, 아래 <b>이메일로 시작</b>을 써주세요.</span>
     <button class="btn block" data-act="openExternal">${IS_IOS ? 'Safari' : 'Chrome'}로 열기</button></div>`;
-  if (IS_STANDALONE && IS_IOS) return `<div class="warn-box"><b>홈 화면 앱에서는 구글 로그인 창이 안 열릴 수 있어요</b><span>아래 <b>이메일로 시작</b>을 써주세요.</span></div>`;
+  if (IS_STANDALONE && IS_IOS) return `<div class="warn-box"><b>홈 화면 앱은 Safari와 따로 로그인해요</b><span>Safari에서 쓰던 <b>같은 이메일 + 비밀번호</b>로 아래에서 로그인하면 상대와 바로 이어져요. 구글로 가입했다면 Safari의 nneow → 설정 → 상대 휴대폰과 연결에서 먼저 <b>비밀번호 만들기</b>를 해주세요.</span></div>`;
   return '';
 }
 const emailFormHTML = () => `<div class="pair-box"><b>이메일로 시작</b><span>어디서나 되는 방법이에요. 처음이면 자동으로 가입돼요. (비밀번호 6자 이상)</span>
@@ -846,6 +863,8 @@ SCREENS.pair = () => {
   } else if (CLOUD) {
     body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
       <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
+      ${c.user && c.user.email && !c.hasPassword ? `<div class="pair-box"><b>홈 화면 앱에서도 쓰려면</b><span>아이폰 홈 화면 앱에서는 구글 로그인이 안 될 수 있어요. 비밀번호를 만들어 두면 홈 화면 앱에서 <b>${esc(c.user.email)}</b> + 비밀번호로 로그인해 바로 이어져요.</span>
+        <input id="pw-new" type="password" autocomplete="new-password" placeholder="비밀번호 (6자 이상)" /><button class="btn block" data-act="addPassword">비밀번호 만들기</button></div>` : ''}
       <ul class="menu"><li><button data-act="editNames">이름 바꾸기${ICON.right}</button></li></ul>
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>
       <p class="note">연결을 해제해도 서버의 데이터는 지워지지 않아요. 같은 계정으로 다시 로그인하면 그대로 이어져요.</p>`;
@@ -889,6 +908,9 @@ async function cloudTry(fn, okMsg) {
       'auth/wrong-password': '비밀번호가 맞지 않아요',
       'auth/too-many-requests': '시도가 너무 많아요. 잠시 후 다시 해주세요',
       'auth/internal-error': '로그인 창을 열지 못했어요. 이메일로 시작을 써주세요',
+      'auth/requires-recent-login': '보안을 위해 한 번 로그아웃 후 다시 로그인하고 시도해 주세요',
+      'auth/provider-already-linked': '이미 비밀번호가 있어요',
+      'auth/credential-already-in-use': '이 이메일은 이미 다른 계정에서 쓰고 있어요',
       'permission-denied': 'Firestore 보안 규칙이 게시되지 않았어요 (Firestore Database → 규칙 → 게시)',
       'unavailable': '서버에 닿지 않아요. 인터넷 연결을 확인해 주세요',
     }[code] || (e && e.message) || '연결에 실패했어요';
@@ -1066,7 +1088,7 @@ function eventDetail(e) {
   actions.evToPhone = () => shareOrDownload(buildICS([e]), `${e.title.replace(/[\\/:*?"<>|]/g, '') || 'event'}.ics`);
 }
 
-/* 메모 작성 / 수정 (사진 + 글 + 상대에게 보내기) */
+/* 메모 작성 / 수정: 날짜 → 큰 글 칸 → 상대에게 보내기 → 사진 추가 */
 function memoCompose(opts = {}) {
   const m = opts.memo || null;
   let image = m ? m.image : '';
@@ -1074,16 +1096,17 @@ function memoCompose(opts = {}) {
   const draw = (sh) => {
     $('#m-photo', sh).innerHTML = image
       ? `<img src="${image}" alt="" /><button class="rm" type="button" id="m-rm">${ICON.x}</button>`
-      : `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">${ICON.image}<span style="font-size:.85em">사진 추가</span></div>`;
+      : `<span class="mp-add">${ICON.image}<span>사진 추가</span></span>`;
+    $('#m-photo', sh).classList.toggle('has', !!image);
     const rm = $('#m-rm', sh); if (rm) rm.onclick = (ev) => { ev.stopPropagation(); image = ''; draw(sh); };
   };
   openSheet(`
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m ? '메모 수정' : '메모'}</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
-    <button type="button" class="photo-pick" id="m-photo"></button>
-    <input type="file" accept="image/*" id="m-file" hidden />
-    <div class="field"><textarea id="m-text" rows="3" placeholder="메모를 남겨보세요">${esc(m ? m.text : (opts.text || ''))}</textarea></div>
     ${m && m.chat ? '' : `<div class="field"><label>날짜</label><input type="date" id="m-date" value="${date}" /></div>`}
+    <div class="field"><textarea id="m-text" class="memo-big-input" placeholder="메모를 남겨보세요">${esc(m ? m.text : (opts.text || ''))}</textarea></div>
     <div class="switch-row">상대방에게 보내기<button class="switch ${(m ? m.toPartner : S.memoSend) ? 'on' : ''}" id="m-send"></button></div>
+    <button type="button" class="memo-photo" id="m-photo"></button>
+    <input type="file" accept="image/*" id="m-file" hidden />
   `, {
     bind: (sh) => {
       draw(sh);
@@ -1233,11 +1256,11 @@ async function receiveShared() {
 }
 
 /* ================= 스티커 · 콕 찌르기 · 상대 일정 메모 ================= */
-function placeSticker(s) {
+function placeSticker(s, pos = {}) {
   if (hasEventOn(YOU, s)) { toast('일정이 있는 날에는 붙일 수 없어요'); return; }
   const kind = S.placing;
   db.stickers = db.stickers.filter((x) => !(x.from === ME && x.to === YOU && x.date === s));
-  db.stickers.push({ id: uid(), from: ME, to: YOU, date: s, kind, at: Date.now() });
+  db.stickers.push({ id: uid(), from: ME, to: YOU, date: s, kind, at: Date.now(), x: pos.x ?? 0.5, y: pos.y ?? 0.78 });
   notify('sticker', `${me().name}님이 ${fmtDate(s)}에 ${STICKERS[kind].label} 스티커를 붙였어요`);
   S.placing = null; save(); render(); toastHTML(`${STICKERS[kind].svg} ${esc(you().name)}의 캘린더에 붙였어요`);
 }
@@ -1429,6 +1452,11 @@ const actions = {
 
   loginAnon: () => cloudTry(() => C().signInAnon()),
   logout: () => cloudTry(() => C().disconnect()),
+  addPassword: () => {
+    const pw = ($('#pw-new') || {}).value || '';
+    if (pw.length < 6) { toast('비밀번호는 6자 이상이어야 해요'); return; }
+    cloudTry(() => C().addPassword(pw), '비밀번호를 만들었어요. 홈 화면 앱에서 이메일로 로그인하세요');
+  },
   createPair: () => {
     const n = ($('#p-name') || {}).value || ''; const mc = (($('#p-mycode') || {}).value || '').replace(/\D/g, '');
     S.myCode = mc;
@@ -1508,9 +1536,12 @@ const actions = {
   nextMonth: () => shiftMonth(1),
   pickMonth: () => monthPicker(S.month.y),
   togglePartner: () => { S.viewPartner = !S.viewPartner; S.placing = null; render(); },
-  day: (el) => {
+  day: (el, e) => {
     const s = el.dataset.date;
-    if (S.placing) { placeSticker(s); return; }
+    if (S.placing) { // 칸 안에서 누른 자리 그대로
+      const r = el.getBoundingClientRect(); const cl = (v) => Math.min(0.86, Math.max(0.14, v));
+      placeSticker(s, { x: cl((e.clientX - r.left) / r.width), y: cl((e.clientY - r.top) / r.height) }); return;
+    }
     if (S.photoMode && !S.rangeStart) { photoDay(s); return; }
     if (S.rangeStart) {
       const a = S.rangeStart; S.rangeStart = null;
@@ -1549,7 +1580,10 @@ const actions = {
   memoTab: (el) => { S.memoTab = el.dataset.v; S.replyTo = null; render(true); },
   memoPrivate: () => { S.memoPrivate = !S.memoPrivate; render(); },
   memoView: (el) => { S.memoView = el.dataset.v; render(); },
-  openMemo: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) memoDetail(m); },
+  openMemo: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) go('memoView', { memoId: m.id }); },
+  memoViewEdit: () => { const m = db.memos.find((x) => x.id === S.memoId); if (m) memoCompose({ memo: m }); },
+  memoViewDelete: () => { const m = db.memos.find((x) => x.id === S.memoId); if (!m) return;
+    confirmSheet('이 메모를 삭제할까요?', '', '삭제', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); back(); }, true); },
   padImage: () => pickFile(async (f) => { S.memoImg = await shrinkImage(f); render(false, true); }),
   padImgRm: () => { S.memoImg = ''; render(false, true); },
 
@@ -1620,9 +1654,8 @@ function moodPicker() {
   const mine = db.moods[ME];
   openSheet(`<div class="sheet-head"><span></span><h3>오늘의 표정</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
     <div class="confirm-sub" style="margin-top:-6px">고른 표정이 ${esc(you().name)}에게 알림으로 전송돼요</div>
-    <div class="face-grid">${Object.entries(FACES).filter(([k]) => k !== 'smile').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>
-    <div class="lbl-sm" style="margin:18px 0 8px">스티커 · ${esc(you().name)}의 캘린더에 붙이기${you().allowAccess ? '' : ' (상대가 접근을 허용해야 해요)'}</div>
-    <div class="face-grid stk-grid">${Object.entries(STICKERS).map(([k, v]) => `<button data-act="stickerPick" data-k="${k}">${v.svg}${v.label}</button>`).join('')}</div>`);
+    <div class="face-grid">${Object.entries(STICKERS).map(([k, v]) => `<button data-act="stickerPick" data-k="${k}" class="stk-btn">${v.svg}${v.label}</button>`).join('')}${Object.entries(FACES).filter(([k]) => k !== 'smile').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>
+    <p class="note" style="padding:12px 0 0">하트 · 별 · 네잎클로버는 ${esc(you().name)}의 캘린더에 붙이는 스티커예요${you().allowAccess ? '' : ' (상대가 접근을 허용해야 해요)'}</p>`);
   actions.moodPick = (el) => { closeSheet(); sendMood(el.dataset.k); };
 }
 
