@@ -587,3 +587,18 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .ph-preview img:only-child { width: 100%; height: auto; aspect-ratio: 1; }
 .ph-info { margin: 12px 0 6px; }
 .ph-info .kv b { width: 64px; }
+
+/* 연결 도움말 · 진단 */
+.warn-box { margin: 14px 20px 0; padding: 14px 16px; border-radius: var(--radius); background: #fff6e0; color: #6b4a00; display: flex; flex-direction: column; gap: 6px; font-size: .88em; line-height: 1.5; }
+.warn-box.err { background: #ffeceb; color: #9a1f17; }
+:root[data-theme="dark"] .warn-box { background: #3a2f12; color: #ffd98a; }
+:root[data-theme="dark"] .warn-box.err { background: #3d1a18; color: #ffb4ad; }
+.warn-box .btn { margin-top: 4px; }
+.pair-box input { margin-bottom: 0; }
+.diag { margin: 4px 20px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.diag-row { display: grid; grid-template-columns: 22px auto 1fr; gap: 8px; align-items: center; padding: 11px 14px; font-size: .86em; border-bottom: 1px solid var(--line); }
+.diag-row:last-child { border-bottom: 0; }
+.diag-row span { font-weight: 900; }
+.diag-row.ok span { color: #2f9a4d; }
+.diag-row.bad span { color: var(--red); }
+.diag-row em { font-style: normal; color: var(--muted); text-align: right; word-break: break-all; }

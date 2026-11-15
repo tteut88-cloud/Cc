@@ -133,6 +133,34 @@ async function signInGoogle() {
   }
 }
 async function signInAnon() { init(); await auth.signInAnonymously(); }
+/* 이메일 로그인: 카카오톡 안 브라우저, 홈 화면 앱 등 구글 로그인 창이 안 뜨는 곳에서도 동작. 계정이 없으면 새로 만듦 */
+async function signInEmail(email, pw) {
+  init();
+  try { await auth.signInWithEmailAndPassword(email, pw); }
+  catch (e) {
+    if (!['auth/user-not-found', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(e.code)) throw e;
+    try { await auth.createUserWithEmailAndPassword(email, pw); }
+    catch (e2) { if (e2.code === 'auth/email-already-in-use') { const x = new Error('비밀번호가 맞지 않아요'); x.code = 'auth/wrong-password'; throw x; } throw e2; }
+  }
+}
+/* 연결 진단: 어디서 막혔는지 알려줌 */
+async function diagnose() {
+  const out = [];
+  out.push({ name: '서버 기능 불러오기', ok: available });
+  out.push({ name: '인터넷 연결', ok: navigator.onLine });
+  if (!available) return out;
+  init();
+  const u = auth.currentUser;
+  out.push({ name: '로그인', ok: !!u, info: u ? (u.isAnonymous ? '로그인 없이 시작' : (u.email || '구글 계정')) : '아직 로그인하지 않았어요' });
+  if (u) {
+    try { await fs.collection('invites').doc('PROBE0').get({ source: 'server' }); out.push({ name: 'Firestore 보안 규칙', ok: true, info: '정상' }); }
+    catch (e) { out.push({ name: 'Firestore 보안 규칙', ok: false, info: e.code === 'permission-denied' ? 'nneow 규칙이 게시되지 않았어요' : e.code === 'unavailable' ? '서버에 닿지 않아요' : (e.code || e.message) }); }
+    const c = info();
+    if (c) out.push({ name: '두 사람 연결', ok: st.members >= 2, info: st.members >= 2 ? '연결됨' : '상대를 기다리는 중' });
+  }
+  if (st.error) out.push({ name: '마지막 오류', ok: false, info: st.error });
+  return out;
+}
 
 /* 같은 계정으로 다른 기기에서 로그인하면 기존 연결을 찾아줌 */
 async function findCouple() {
@@ -220,7 +248,7 @@ function start(h) {
 }
 
 window.nneowCloud = {
-  available, start, push, flush, info, signInGoogle, signInAnon, createCouple, joinCouple, disconnect,
+  available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, diagnose, createCouple, joinCouple, disconnect,
   get status() { return st.status; },
   get user() { return st.user; },
   get members() { return st.members; },

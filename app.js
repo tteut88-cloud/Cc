@@ -81,6 +81,7 @@ const STICKERS = {
   star: { label: '별', svg: '<svg class="stk" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9z" fill="#ffd23f" stroke="#e7b500" stroke-width="1.2" stroke-linejoin="round"/><circle cx="9.6" cy="10" r="1" fill="#fff" opacity=".8"/></svg>' },
   clover: { label: '네잎클로버', svg: '<svg class="stk" viewBox="0 0 24 24"><g fill="#55c271" stroke="#2f9a4d" stroke-width="1" stroke-linejoin="round"><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(0 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(90 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(180 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(270 12 12)"/></g><circle cx="12" cy="12" r="1.3" fill="#2f9a4d"/></svg>' },
 };
+const catFace = () => '<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 15 L9.5 4.5 L16 8.6 A14 14 0 0 1 24 8.6 L30.5 4.5 L32 15 A14 14 0 1 1 8 15 Z"/></svg>';
 const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/>${(FACES[k] || FACES.smile).d}</svg>`;
 
 /* ================= 저장소 ================= */
@@ -486,7 +487,7 @@ SCREENS.month = () => {
   return `
   <section class="screen">
     <header class="month-head">
-      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? '<img class="cat" src="assets/icons/logo.png" alt="" />' : face(curFace)}</button>
+      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? catFace() : face(curFace)}</button>
       <button class="icon-btn" data-act="prevMonth" aria-label="이전 달">${ICON.left}</button>
       <button class="month-title" data-act="pickMonth">${y}년 ${m + 1}월</button>
       <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button>
@@ -796,6 +797,22 @@ function cloudLabel() {
   }
   return st === 'signed-in' ? '로그인됨' : '연결 안 됨';
 }
+const UA = navigator.userAgent || '';
+const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(|NAVER|Line\/|DaumApps|everytimeApp|SamsungBrowser\/.*CrossApp/i.test(UA);
+const IS_KAKAO = /KAKAOTALK/i.test(UA);
+const IS_IOS = /iPhone|iPad|iPod/i.test(UA);
+const IS_STANDALONE = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+function loginHelpHTML() {
+  if (IN_APP) return `<div class="warn-box"><b>${IS_KAKAO ? '카카오톡' : '앱'} 안의 브라우저로 열려 있어요</b>
+    <span>여기서는 구글 로그인이 막혀 있어요. 외부 브라우저(${IS_IOS ? 'Safari' : 'Chrome'})로 열거나, 아래 <b>이메일로 시작</b>을 써주세요.</span>
+    <button class="btn block" data-act="openExternal">${IS_IOS ? 'Safari' : 'Chrome'}로 열기</button></div>`;
+  if (IS_STANDALONE && IS_IOS) return `<div class="warn-box"><b>홈 화면 앱에서는 구글 로그인 창이 안 열릴 수 있어요</b><span>아래 <b>이메일로 시작</b>을 써주세요.</span></div>`;
+  return '';
+}
+const emailFormHTML = () => `<div class="pair-box"><b>이메일로 시작</b><span>어디서나 되는 방법이에요. 처음이면 자동으로 가입돼요. (비밀번호 6자 이상)</span>
+  <input id="l-email" type="email" autocomplete="email" placeholder="이메일" value="${esc(S.loginEmail || '')}" />
+  <input id="l-pw" type="password" autocomplete="current-password" placeholder="비밀번호" />
+  <button class="btn block" data-act="loginEmail">이메일로 시작</button></div>`;
 SCREENS.pair = () => {
   const c = C();
   let body = '';
@@ -803,8 +820,10 @@ SCREENS.pair = () => {
     body = `<p class="note">서버 연결 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>`;
   } else if (CLOUD && c.status === 'signed-out') {
     body = `<div class="pair-hero">${ICON.lock}<b>로그인이 풀렸어요</b><span>연결했던 계정으로 다시 로그인해 주세요</span></div>
-      <div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button>
-      <button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
+      ${loginHelpHTML()}
+      <div class="pair-actions">${IN_APP ? '' : '<button class="btn block" data-act="loginGoogle">구글로 로그인</button>'}</div>
+      ${emailFormHTML()}
+      <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
   } else if (CLOUD && c.members < 2 && CLOUD.role === 'a') {
     body = `<div class="pair-hero"><span>상대 휴대폰의 nneow에서<br/>이 초대 코드를 입력해 주세요</span>
       <div class="pair-code">${esc(CLOUD.code || '------')}</div>
@@ -827,13 +846,18 @@ SCREENS.pair = () => {
   } else {
     body = `<div class="pair-hero"><img src="assets/icons/logo.png" alt="" class="pair-logo" /><b>상대 휴대폰과 연결하기</b>
       <span>로그인하고 초대 코드로 연결하면<br/>두 사람의 휴대폰이 실시간으로 공유돼요</span></div>
-      <div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button>
-      <button class="btn ghost block" data-act="loginAnon">로그인 없이 시작</button></div>
-      <p class="note">구글 로그인을 추천해요. 휴대폰을 바꿔도 같은 계정으로 로그인하면 그대로 이어져요.<br/>‘로그인 없이 시작’은 앱 데이터를 지우면 연결이 끊겨요.</p>`;
+      ${loginHelpHTML()}
+      ${IN_APP ? '' : '<div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button></div>'}
+      ${emailFormHTML()}
+      <p class="note">휴대폰을 바꿔도 같은 구글 계정 / 이메일로 로그인하면 그대로 이어져요.</p>`;
   }
-  return `<section class="screen">${topbar('상대 휴대폰과 연결')}<div class="scroll">${body}</div></section>`;
+  const diag = S.diag ? `<div class="diag">${S.diag.map((d) => `<div class="diag-row ${d.ok ? 'ok' : 'bad'}"><span>${d.ok ? '✓' : '✕'}</span><b>${esc(d.name)}</b><em>${esc(d.info || (d.ok ? '정상' : '문제 있음'))}</em></div>`).join('')}</div>` : '';
+  const err = S.cloudErr ? `<div class="warn-box err"><b>연결 오류</b><span>${esc(S.cloudErr)}</span></div>` : '';
+  return `<section class="screen">${topbar('상대 휴대폰과 연결')}<div class="scroll">${err}${body}
+    <div class="pair-actions"><button class="btn ghost block" data-act="runDiag">연결 진단하기</button></div>${diag}<div style="height:30px"></div></div></section>`;
 };
 async function cloudTry(fn, okMsg) {
+  S.cloudErr = '';
   try { await fn(); if (okMsg) toast(okMsg); }
   catch (e) {
     const code = e && e.code;
@@ -842,8 +866,19 @@ async function cloudTry(fn, okMsg) {
       'auth/unauthorized-domain': '이 주소가 Firebase에 등록되지 않았어요 (Authentication → 설정 → 승인된 도메인)',
       'auth/operation-not-allowed': 'Firebase에서 이 로그인 방식을 켜주세요 (Authentication → 로그인 방법)',
       'auth/admin-restricted-operation': 'Firebase에서 익명 로그인을 켜주세요 (Authentication → 로그인 방법)',
-      'permission-denied': '권한이 없어요. Firestore 보안 규칙을 확인해 주세요',
+      'auth/operation-not-supported-in-this-environment': '이 브라우저에서는 구글 로그인이 안 돼요. 이메일로 시작을 써주세요',
+      'auth/web-storage-unsupported': '이 브라우저에서는 로그인이 안 돼요. Chrome이나 Safari로 열어주세요',
+      'auth/network-request-failed': '인터넷 연결을 확인해 주세요',
+      'auth/invalid-email': '이메일 주소를 확인해 주세요',
+      'auth/weak-password': '비밀번호는 6자 이상이어야 해요',
+      'auth/wrong-password': '비밀번호가 맞지 않아요',
+      'auth/too-many-requests': '시도가 너무 많아요. 잠시 후 다시 해주세요',
+      'auth/internal-error': '로그인 창을 열지 못했어요. 이메일로 시작을 써주세요',
+      'permission-denied': 'Firestore 보안 규칙이 게시되지 않았어요 (Firestore Database → 규칙 → 게시)',
+      'unavailable': '서버에 닿지 않아요. 인터넷 연결을 확인해 주세요',
     }[code] || (e && e.message) || '연결에 실패했어요';
+    const opNotAllowed = code === 'auth/operation-not-allowed';
+    S.cloudErr = (opNotAllowed && S.lastLogin === 'email') ? 'Firebase에서 이메일/비밀번호 로그인을 켜주세요 (Authentication → 로그인 방법 → 이메일/비밀번호)' : `${msg}${code ? ` [${code}]` : ''}`;
     toast(msg);
   }
   render(false, true);
@@ -1359,7 +1394,20 @@ const actions = {
   toColors: () => go('colors'),
   toSync: () => go('sync'),
   toPair: () => go('pair'),
-  loginGoogle: () => cloudTry(() => C().signInGoogle()),
+  loginGoogle: () => { S.lastLogin = 'google'; cloudTry(() => C().signInGoogle()); },
+  loginEmail: () => {
+    const em = ($('#l-email') || {}).value || ''; const pw = ($('#l-pw') || {}).value || '';
+    if (!em.includes('@')) { toast('이메일을 입력해 주세요'); return; }
+    if (pw.length < 6) { toast('비밀번호는 6자 이상이어야 해요'); return; }
+    S.lastLogin = 'email'; S.loginEmail = em.trim(); cloudTry(() => C().signInEmail(em.trim(), pw));
+  },
+  openExternal: () => {
+    const url = location.href;
+    if (IS_KAKAO) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+    else if (!IS_IOS) location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+    else toast('오른쪽 아래 … 메뉴에서 ‘Safari로 열기’를 눌러주세요');
+  },
+  runDiag: async () => { if (!C()) return; toast('진단 중…'); S.diag = await C().diagnose(); render(false, true); },
   loginAnon: () => cloudTry(() => C().signInAnon()),
   logout: () => cloudTry(() => C().disconnect()),
   createPair: () => { const n = ($('#p-name') || {}).value || ''; cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim()); }); },
