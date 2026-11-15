@@ -53,7 +53,7 @@ const ICON = {
 /* 표정 — 같은 선 스타일로 그린 얼굴들. 웃는 표정은 '활짝'만 선택지에 포함 */
 const FACES = {
   smile: { label: '기본', d: '<circle cx="14.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><circle cx="25.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><path d="M13 23.5q7 7 14 0"/>' },
-  grin: { label: '활짝', d: '<path d="M11.5 17.5q3-4 6 0M22.5 17.5q3-4 6 0"/><path d="M12 22h16q-1 9-8 9t-8-9z" fill="currentColor"/>' },
+  grin: { label: '활짝', d: '<path d="M11.5 17.5q3-4 6 0M22.5 17.5q3-4 6 0"/><path d="M12 22h16q-1 9-8 9t-8-9z"/>' },
   love: { label: '사랑', d: '<path d="M14.5 19.5s-4-2.4-4-5.2a2 2 0 0 1 4-.9 2 2 0 0 1 4 .9c0 2.8-4 5.2-4 5.2zM25.5 19.5s-4-2.4-4-5.2a2 2 0 0 1 4-.9 2 2 0 0 1 4 .9c0 2.8-4 5.2-4 5.2z" fill="#ff5f93" stroke="#ff5f93" stroke-width="1"/><circle cx="20" cy="26.5" r="2.3"/>' },
   flutter: { label: '설렘', d: '<circle cx="14.5" cy="17" r="2" fill="currentColor" stroke="none"/><circle cx="25.5" cy="17" r="2" fill="currentColor" stroke="none"/><path d="M17.5 25.5h5"/><ellipse cx="11.5" cy="22.5" rx="2.6" ry="1.6" fill="#ff8fb1" stroke="none" opacity=".8"/><ellipse cx="28.5" cy="22.5" rx="2.6" ry="1.6" fill="#ff8fb1" stroke="none" opacity=".8"/>' },
   kiss: { label: '뽀뽀', d: '<path d="M11.5 16.5h5"/><circle cx="25.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><path d="M19 22.5q4 1.5 0 3.2q4 1.7 0 3.3"/>' },
@@ -78,7 +78,7 @@ function seed() {
   const t = new Date(); const Y = t.getFullYear(); const M = t.getMonth();
   const D = (n) => ymd(new Date(Y, M, n));
   const today = todayStr(); const now = Date.now();
-  const ev = (o) => ({ id: uid(), allDay: false, shared: false, memo: '', startTime: '', endTime: '', type: 'schedule', createdAt: now, ...o });
+  const ev = (o) => ({ id: uid(), allDay: false, shared: false, deadline: false, memo: '', startTime: '', endTime: '', type: 'schedule', createdAt: now, ...o });
   return {
     v: 1,
     users: {
@@ -94,8 +94,9 @@ function seed() {
       ev({ owner: 'b', title: '병원 방문', start: today, end: today, startTime: '11:00', endTime: '12:00' }),
       ev({ owner: 'b', title: '회의', start: today, end: today, startTime: '10:00', endTime: '11:00', type: 'plan' }),
       ev({ owner: 'b', title: '기념일', start: D(23), end: D(23), allDay: true, shared: true }),
+      ev({ owner: 'a', title: '보고서 제출', start: D(17), end: D(17), allDay: true, deadline: true }),
     ],
-    deadlines: [{ id: uid(), owner: 'a', from: D(13), to: D(17), title: '보고서 마감', shared: false }],
+    deadlines: [{ id: uid(), owner: 'a', from: D(13), to: D(19), title: '다이어트', shared: false }],
     memos: [
       { id: uid(), owner: 'a', date: D(9), text: '이번 주말에 영화 볼까?', image: '', toPartner: true, createdAt: now - 50 * HOUR },
       { id: uid(), owner: 'b', date: D(9), text: '좋아!\n다음주도 괜찮아 :)', image: '', toPartner: true, createdAt: now - 49 * HOUR },
@@ -190,7 +191,7 @@ function visibleDeadlines(owner = S.viewPartner ? YOU : ME) {
 }
 const myMemos = () => db.memos.filter((m) => m.owner === ME || m.toPartner);
 const memosOn = (s) => myMemos().filter((m) => m.date === s);
-const unreadCount = () => db.notifs.filter((n) => n.to === ME && !n.read).length;
+const unreadCount = () => db.notifs.filter((n) => n.to === ME && n.type === 'memo' && !n.read).length;
 
 function notify(type, text, extra = {}) {
   db.notifs.push({ id: uid(), to: YOU, from: ME, type, text, at: Date.now(), read: false, ...extra });
@@ -351,7 +352,6 @@ SCREENS.month = () => {
   const daysIn = new Date(y, m + 1, 0).getDate();
   const weeks = Math.ceil((first.getDay() + daysIn) / 7);
   const evs = visibleEvents();
-  const dls = visibleDeadlines();
   const t = todayStr();
   const owner = S.viewPartner ? YOU : ME;
   let html = '';
@@ -363,8 +363,7 @@ SCREENS.month = () => {
       const out = d.getMonth() !== m;
       const memo = memosOn(s).length > 0;
       const dw = dayWx(s); const rain = dw && isRain(dw.code); const snow = dw && isSnow(dw.code);
-      const dlEnd = dls.some((x) => x.to === s);
-      const inRed = dls.some((x) => x.from <= s && x.to >= s);
+      const dlEnd = evs.some((x) => x.deadline && x.end === s);
       const photo = S.photoMode && memosOn(s).find((x) => x.image);
       cells += `
         <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${s === t ? 'today' : ''} ${S.rangeStart === s ? 'range-start' : ''} ${photo ? 'photo' : ''}"
@@ -373,7 +372,6 @@ SCREENS.month = () => {
             ${!out && (rain || snow) ? `<span class="sticker ${snow ? 'snow' : ''}"></span>` : ''}
             <span class="num ${memo && !out ? 'memo' : ''}">${d.getDate()}</span>${!out && rain ? '<span class="rainline"></span>' : ''}
           </div>
-          ${!out && inRed && !S.photoMode ? '<span class="redline"></span>' : ''}
           ${!out && dlEnd ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
     }
@@ -497,7 +495,7 @@ SCREENS.day = () => {
     ${stripHTML()}
     ${wxLine(S.sel)}
     ${allday.length || dls.length ? `<div class="allday">
-      ${dls.map((d) => `<button class="chip red" data-act="openDeadline" data-id="${d.id}">⏰ ${esc(d.title)} ${d.to === S.sel ? '· 오늘 마감' : `· D-${diffDays(S.sel, d.to)}`}</button>`).join('')}
+      ${dls.map((d) => `<button class="chip red" data-act="openDeadline" data-id="${d.id}">레드라인 · ${esc(d.title)} ${d.to === S.sel ? '· 오늘까지' : `· ${diffDays(S.sel, d.to)}일 남음`}</button>`).join('')}
       ${allday.map((e) => `<button class="chip" style="--c:${colorOf(e)}" data-act="openEvent" data-id="${e.id}">${esc(e.title)}${e.start !== e.end ? ` (${parse(e.start).getDate()}–${parse(e.end).getDate()}일)` : ''}</button>`).join('')}
     </div>` : ''}
     <div class="scroll" id="tl-scroll">
@@ -579,39 +577,39 @@ SCREENS.memo = () => {
 };
 after.memo = () => { const c = $('#chat-scroll'); c.scrollTop = c.scrollHeight; };
 
-/* ---------- ⑥ 기록 ---------- */
+/* ---------- ⑥ 기록: 서로에게 남긴 메모만, 카톡 대화창처럼 ---------- */
 SCREENS.inbox = () => {
-  const notifs = db.notifs.filter((n) => n.to === ME).slice().reverse().slice(0, 30);
-  const fromYou = db.memos.filter((m) => m.owner === YOU && m.toPartner).slice().sort((a, b) => b.createdAt - a.createdAt);
-  const shared = db.todos.filter((t) => t.shared).sort((a, b) => a.done - b.done || b.date.localeCompare(a.date));
+  const list = db.memos.filter((m) => m.toPartner).slice().sort((a, b) => a.createdAt - b.createdAt);
+  let lastDay = '', prevOwner = null, html = '';
+  list.forEach((m, i) => {
+    const mine = m.owner === ME;
+    const d = new Date(m.createdAt); const day = ymd(d);
+    if (day !== lastDay) { html += `<div class="kk-date">${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일</div>`; lastDay = day; prevOwner = null; }
+    const next = list[i + 1];
+    const showTime = !next || next.owner !== m.owner || clockLabel(next.createdAt) !== clockLabel(m.createdAt) || ymd(new Date(next.createdAt)) !== day;
+    const first = prevOwner !== m.owner;
+    html += `<div class="kk-row ${mine ? 'me' : 'you'} ${first ? 'first' : ''}">
+      ${!mine ? (first ? `<div class="kk-av">${esc(you().name.slice(0, 1))}</div>` : '<div class="kk-av blank"></div>') : ''}
+      <div class="kk-col">
+        ${!mine && first ? `<div class="kk-name">${esc(you().name)}</div>` : ''}
+        <div class="kk-line">
+          <div class="kk-bubble">${m.image ? `<img src="${m.image}" alt="" />` : ''}${m.text ? `<span>${esc(m.text)}</span>` : ''}</div>
+          ${showTime ? `<span class="kk-time">${clockLabel(m.createdAt)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+    prevOwner = m.owner;
+  });
   return `
-  <section class="screen">
-    ${topbar('기록')}
-    <div class="scroll">
-      <div class="section">
-        <h2>같이 해야 할 일</h2>
-        ${shared.map((t) => `<div class="card"><button class="chk ${t.done ? 'on' : ''}" data-act="toggleTodo" data-id="${t.id}">${t.done ? ICON.check : ''}</button>
-          <div class="body"><div class="t" style="${t.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(t.text)}</div><div class="s">${fmtDate(t.date)} · ${esc(db.users[t.owner].name)}</div></div>
-          <button class="del" style="color:var(--muted)" data-act="delTodo" data-id="${t.id}">${ICON.x}</button></div>`).join('') || '<div class="empty">같이 할 일이 아직 없어요</div>'}
-        <form class="add-row" data-form="addShared" style="margin-bottom:8px"><input name="text" placeholder="같이 할 일 추가" autocomplete="off" /><button class="btn">추가</button></form>
-      </div>
-      <div class="section">
-        <h2>${esc(you().name)}가 보낸 메모</h2>
-        ${fromYou.map((m) => `<button class="card" style="width:100%;text-align:left" data-act="toMemo">
-          ${m.image ? `<img class="thumb" src="${m.image}" alt="" />` : ''}
-          <div class="body"><div class="t">${esc(m.text) || '사진'}</div><div class="s">${fmtDate(m.date)} 메모 · ${ago(m.createdAt)}</div></div></button>`).join('') || '<div class="empty">받은 메모가 없어요</div>'}
-      </div>
-      <div class="section">
-        <h2>알림</h2>
-        ${notifs.map((n) => `<div class="card ${n.read ? '' : 'unread'}">${n.face ? face(n.face) : '<span style="font-size:1.4em">💗</span>'}
-          <div class="body"><div class="t">${esc(n.text)}</div><div class="s">${ago(n.at)}</div></div></div>`).join('') || '<div class="empty">새 알림이 없어요</div>'}
-      </div>
-    </div>
+  <section class="screen kk">
+    ${topbar(esc(you().name))}
+    <div class="scroll kk-scroll" id="kk-scroll">${html || '<div class="kk-empty">아직 서로에게 남긴 메모가 없어요</div>'}</div>
   </section>`;
 };
 after.inbox = () => {
-  let ch = false; db.notifs.forEach((n) => { if (n.to === ME && !n.read) { n.read = true; ch = true; } });
-  if (ch) save(); // 표시는 이번 화면에선 '새 알림' 테두리 유지
+  const c = $('#kk-scroll'); c.scrollTop = c.scrollHeight;
+  let ch = false; db.notifs.forEach((n) => { if (n.to === ME && n.type === 'memo' && !n.read) { n.read = true; ch = true; } });
+  if (ch) save();
 };
 
 /* ---------- ⑦ 설정 ---------- */
@@ -675,7 +673,7 @@ function searchResults() {
   const row = (c, t, s, date) => `<button class="result" data-act="gotoDay" data-date="${date}"><span class="dotc" style="--c:${c}"></span><div><div class="t">${t}</div><div class="s">${s}</div></div></button>`;
   const out = [
     ...evs.map((e) => row(colorOf(e), hl(e.title, q), `${fmtDate(e.start)}${e.end !== e.start ? ' – ' + fmtDate(e.end) : ''} · ${e.owner === ME ? '내 일정' : esc(you().name) + ' 일정'}`, e.start)),
-    ...dls.map((d) => row('var(--red)', hl(d.title, q), `데드라인 · ${fmtDate(d.to)}`, d.to)),
+    ...dls.map((d) => row('var(--red)', hl(d.title, q), `레드라인 · ${fmtDate(d.to)}까지`, d.to)),
     ...memos.map((m) => row(db.users[m.owner].colors.memo, hl(m.text, q), `메모 · ${fmtDate(m.date)}`, m.date)),
     ...todos.map((t) => row('var(--muted)', hl(t.text, q), `할 일 · ${fmtDate(t.date)}`, t.date)),
   ];
@@ -709,7 +707,7 @@ function confirmSheet(text, sub, okLabel, onOk, danger) {
 /* 일정 편집 */
 function eventSheet(ev) {
   const isNew = !ev.id;
-  const e = { title: '', type: 'schedule', allDay: false, start: S.sel, end: S.sel, startTime: '09:00', endTime: '10:00', shared: false, memo: '', ...ev };
+  const e = { title: '', type: 'schedule', allDay: false, deadline: false, start: S.sel, end: S.sel, startTime: '09:00', endTime: '10:00', shared: false, memo: '', ...ev };
   openSheet(`
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${isNew ? '새 일정' : '일정 수정'}</h3><button class="icon-btn" data-act="saveEvent">${ICON.check}</button></div>
     <div class="field"><input id="e-title" placeholder="제목" value="${esc(e.title)}" /></div>
@@ -719,6 +717,7 @@ function eventSheet(ev) {
     <div class="row2 field"><div><label>시작일</label><input type="date" id="e-start" value="${e.start}" /></div><div><label>종료일</label><input type="date" id="e-end" value="${e.end}" /></div></div>
     <div class="row2 field" id="e-times" style="${e.allDay ? 'display:none' : ''}"><div><label>시작</label><input type="time" id="e-st" value="${e.startTime || '09:00'}" /></div><div><label>종료</label><input type="time" id="e-et" value="${e.endTime || '10:00'}" /></div></div>
     <div class="switch-row">💗 ${esc(you().name)}와 공유<button class="switch ${e.shared ? 'on' : ''}" id="e-shared"></button></div>
+    <div class="switch-row"><span>◢ 데드라인 <small style="color:var(--muted);font-weight:500">(마지막 날에 표시)</small></span><button class="switch ${e.deadline ? 'on' : ''}" id="e-deadline"></button></div>
     <div class="field"><label>메모</label><textarea id="e-memo" rows="3" placeholder="이 일정에 남길 메모">${esc(e.memo)}</textarea></div>
     ${isNew ? '' : `<button class="btn danger block" data-act="deleteEvent">일정 삭제</button>`}
   `, {
@@ -736,7 +735,7 @@ function eventSheet(ev) {
     const allDay = $('#e-allday', sh).classList.contains('on');
     let st = $('#e-st', sh).value, et = $('#e-et', sh).value;
     if (!allDay && et && st && et <= st) et = `${pad(Math.min(23, +st.slice(0, 2) + 1))}:${st.slice(3)}`;
-    const data = { title, type: $('#e-type .on', sh).dataset.v, allDay, start, end, startTime: allDay ? '' : st, endTime: allDay ? '' : et, shared: $('#e-shared', sh).classList.contains('on'), memo: $('#e-memo', sh).value.trim() };
+    const data = { title, type: $('#e-type .on', sh).dataset.v, allDay, start, end, startTime: allDay ? '' : st, endTime: allDay ? '' : et, shared: $('#e-shared', sh).classList.contains('on'), deadline: $('#e-deadline', sh).classList.contains('on'), memo: $('#e-memo', sh).value.trim() };
     if (isNew) {
       db.events.push({ id: uid(), owner: ME, createdAt: Date.now(), ...data });
       if (data.shared) notify('event', `${me().name}님이 공유 일정을 추가했어요: ${title} (${fmtDate(start)})`);
@@ -762,6 +761,7 @@ function eventDetail(e) {
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${esc(e.title)}</h3>${mine ? `<button class="icon-btn" data-act="editEvent">수정</button>` : '<span></span>'}</div>
     <div class="kv"><b>언제</b><span>${when}</span></div>
     <div class="kv"><b>종류</b><span class="chip" style="--c:${colorOf(e)}">${e.shared ? '공유 · ' : ''}${CAT[e.type] || '일정'}</span></div>
+    ${e.deadline ? `<div class="kv"><b>마감</b><span>◢ ${fmtDate(e.end)}까지</span></div>` : ''}
     <div class="kv"><b>누구</b><span>${mine ? '내 일정' : esc(db.users[e.owner].name) + '의 일정'}</span></div>
     <div class="lbl-sm" style="margin-top:14px">메모</div>
     ${e.memo ? `<div class="detail-memo">${esc(e.memo)}</div>` : ''}
@@ -878,7 +878,7 @@ const actions = {
   openDeadline: (el) => {
     const d = db.deadlines.find((x) => x.id === el.dataset.id); if (!d) return;
     const mine = d.owner === ME;
-    openSheet(`<div class="confirm-text">⏰ ${esc(d.title)}</div><div class="confirm-sub">${fmtDate(d.from)} → ${fmtDate(d.to)}${d.shared ? ' · 공유' : ''}</div>
+    openSheet(`<div class="confirm-text">레드라인 · ${esc(d.title)}</div><div class="confirm-sub">${fmtDate(d.from)} → ${fmtDate(d.to)}${d.shared ? ' · 공유' : ''}</div>
       <div class="actions"><button class="btn ghost" data-act="close">닫기</button>${mine ? '<button class="btn danger" data-act="delDeadline">레드라인 삭제</button>' : ''}</div>`, { center: true });
     actions.delDeadline = () => { db.deadlines = db.deadlines.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('레드라인을 지웠어요'); };
   },
@@ -961,14 +961,14 @@ function redlineAsk(target) {
   const from = S.sel < target ? S.sel : target; const to = S.sel < target ? target : S.sel;
   openSheet(`<div class="confirm-text">이 기간까지 레드라인을<br/>설정하겠습니까?</div>
     <div class="confirm-sub">${fmtDate(from)} → <b style="color:var(--red)">${fmtDate(to)}</b></div>
-    <div class="field"><input id="r-title" placeholder="데드라인 이름 (예: 보고서 마감)" /></div>
+    <div class="field"><input id="r-title" placeholder="레드라인 이름 (예: 시험 기간)" /></div>
     <div class="switch-row" style="padding-top:0">💗 ${esc(you().name)}와 공유<button class="switch" id="r-shared"></button></div>
     <div class="actions"><button class="btn ghost" data-act="close">아니요</button><button class="btn" data-act="redOk" style="background:var(--red);color:#fff">설정</button></div>`, {
     center: true,
     bind: (sh) => { $('#r-shared', sh).onclick = (e) => e.currentTarget.classList.toggle('on'); },
   });
   actions.redOk = () => {
-    const title = $('#r-title', root).value.trim() || '데드라인';
+    const title = $('#r-title', root).value.trim() || '레드라인';
     const shared = $('#r-shared', root).classList.contains('on');
     db.deadlines.push({ id: uid(), owner: ME, from, to, title, shared });
     if (shared) notify('deadline', `${me().name}님이 레드라인을 설정했어요: ${title} (${fmtDate(to)}까지)`);

@@ -180,7 +180,7 @@ svg { display: block; }
 .sticker.snow { background: #9cc3ff; box-shadow: inset 0 0 0 2px #fff; }
 .rainline { display: inline-block; width: 1.5px; height: 16px; background: var(--rain); border-radius: 2px; margin-left: 5px; opacity: .85; }
 .deadline-tri { position: absolute; right: 0; bottom: 0; width: 0; height: 0; border-style: solid; border-width: 0 0 15px 15px; border-color: transparent transparent var(--fg) transparent; }
-.redline { position: absolute; left: 0; right: 0; bottom: 3px; height: 2px; background: var(--red); opacity: .8; }
+
 .cell.range-start { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
 .cell.photo { color: #fff; }
 .cell.photo .num { color: #fff !important; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
@@ -360,3 +360,32 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast .face { width: 24px; height: 24px; }
+
+/* ---------- ⑥ 기록: 카톡 대화창 ---------- */
+.kk { --kk-bg: #bacee0; --kk-me: #fee500; --kk-you: #ffffff; }
+:root[data-theme="dark"] .kk { --kk-bg: #1f2a35; --kk-me: #e6cf00; --kk-you: #2c2c31; }
+.kk .topbar { background: var(--kk-bg); border-bottom-color: transparent; color: #111; }
+:root[data-theme="dark"] .kk .topbar { color: var(--fg); }
+.kk-scroll { background: var(--kk-bg); padding: 6px 10px 18px; }
+.kk-date { align-self: center; margin: 14px auto 6px; width: fit-content; font-size: .72em; color: #fff; background: rgba(0,0,0,.18); padding: 5px 12px; border-radius: 99px; }
+.kk-row { display: flex; gap: 8px; margin-top: 4px; }
+.kk-row.first { margin-top: 12px; }
+.kk-row.me { justify-content: flex-end; }
+.kk-av { width: 38px; height: 38px; border-radius: 15px; background: #9bb6ce; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .9em; flex-shrink: 0; }
+.kk-av.blank { visibility: hidden; }
+.kk-col { display: flex; flex-direction: column; max-width: 72%; }
+.kk-row.me .kk-col { align-items: flex-end; }
+.kk-name { font-size: .78em; color: #333; margin: 0 0 4px 2px; }
+:root[data-theme="dark"] .kk-name { color: var(--muted); }
+.kk-line { display: flex; align-items: flex-end; gap: 5px; }
+.kk-row.me .kk-line { flex-direction: row-reverse; }
+.kk-bubble { background: var(--kk-you); color: #111; border-radius: 15px; padding: 8px 11px; font-size: .93em; line-height: 1.42; white-space: pre-wrap; word-break: break-word; position: relative; }
+:root[data-theme="dark"] .kk-row.you .kk-bubble { color: var(--fg); }
+.kk-row.me .kk-bubble { background: var(--kk-me); }
+.kk-row.you.first .kk-bubble { border-top-left-radius: 4px; }
+.kk-row.me.first .kk-bubble { border-top-right-radius: 4px; }
+.kk-bubble img { display: block; width: 100%; max-width: 220px; border-radius: 10px; margin: -2px -2px 6px; }
+.kk-bubble img:last-child { margin-bottom: -2px; }
+.kk-time { font-size: .66em; color: #4b5a68; white-space: nowrap; flex-shrink: 0; }
+:root[data-theme="dark"] .kk-time { color: var(--muted); }
+.kk-empty { text-align: center; color: #4b5a68; padding: 60px 0; font-size: .9em; }
