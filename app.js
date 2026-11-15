@@ -86,7 +86,9 @@ const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="c
 
 /* ================= 저장소 ================= */
 const CLOUD = (() => { try { return JSON.parse(localStorage.getItem('nneow.cloud')); } catch { return null; } })();
-const KEY = CLOUD ? 'nneow.couple.' + CLOUD.cid : 'duo.store.v1';
+// 연결을 끊은 뒤에는 그동안 쓰던 캘린더(nneow.lastDb)를 그대로 보여주고, 다시 연결할 때 가져감
+const LEFT = !CLOUD && !!localStorage.getItem('nneow.lastDb');
+const KEY = CLOUD ? 'nneow.couple.' + CLOUD.cid : LEFT ? 'nneow.lastDb' : 'duo.store.v1';
 const DEFAULT_COLORS = { schedule: '#e0707c', plan: '#f5a94a', memo: '#6dbb6d', shared: '#5b8def' };
 const PALETTE = ['#e0707c', '#ff8fb1', '#f5a94a', '#f2cf4a', '#9ccc65', '#6dbb6d', '#4fc3b0', '#5bc0eb', '#5b8def', '#8e7cf0', '#b07cc6', '#9e9e9e'];
 
@@ -171,7 +173,7 @@ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* 용량 초과 
 
 /* 사용자: 기본은 'a'. ?as=b 로 상대방 시점 */
 const params = new URLSearchParams(location.search);
-const ME = CLOUD ? CLOUD.role : (params.get('as') === 'b' || params.get('as') === 'a') ? params.get('as') : (sessionStorage.getItem('duo.me') || localStorage.getItem('duo.me') || 'a');
+const ME = CLOUD ? CLOUD.role : LEFT ? 'a' : (params.get('as') === 'b' || params.get('as') === 'a') ? params.get('as') : (sessionStorage.getItem('duo.me') || localStorage.getItem('duo.me') || 'a');
 if (!CLOUD) sessionStorage.setItem('duo.me', ME);
 const YOU = ME === 'a' ? 'b' : 'a';
 const me = () => db.users[ME];
@@ -859,24 +861,26 @@ SCREENS.pair = () => {
       <span class="pair-wait">상대를 기다리는 중…</span></div>
       <div class="pair-actions"><button class="btn block" data-act="shareInvite">초대 코드 보내기</button>
       <div class="actions" style="margin:0"><button class="btn ghost" data-act="copyCode">코드 복사</button><button class="btn ghost" data-act="changeCode">코드 바꾸기</button></div>
-      <button class="btn danger block" data-act="unpair">초대 취소</button></div>`
+      <button class="btn danger block" data-act="cancelInvite">초대 취소</button></div>`
     : `<div class="pair-hero"><b>초대 코드를 정해주세요</b><span>상대가 입력할 숫자예요 (4~8자리)</span></div>
       <div class="pair-box"><input id="p-mycode" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="예: 1004" class="code-input" />
       <button class="btn block" data-act="setCode">이 코드로 정하기</button><button class="btn ghost block" data-act="randomCode">아무 숫자로 만들기</button></div>
-      <div class="pair-actions"><button class="btn danger block" data-act="unpair">초대 취소</button></div>`;
+      <div class="pair-actions"><button class="btn danger block" data-act="cancelInvite">초대 취소</button></div>`;
   } else if (CLOUD) {
     body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
       <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
       ${c.user && c.user.email && !c.hasPassword ? `<div class="pair-box"><b>웹앱(홈 화면 앱)에서도 쓰려면</b><span>아이폰 웹앱에서는 구글 로그인 창이 열리지 않아요. 여기서 비밀번호를 만들어 두면, 웹앱에서 <b>${esc(c.user.email)}</b> + 비밀번호로 로그인해 바로 이어져요.</span>
         <input id="pw-new" type="password" autocomplete="new-password" placeholder="비밀번호 (6자 이상)" /><button class="btn block" data-act="addPassword">비밀번호 만들기</button></div>` : ''}
       <ul class="menu"><li><button data-act="editNames">이름 바꾸기${ICON.right}</button></li></ul>
-      <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>
-      <p class="note">연결을 해제해도 서버의 데이터는 지워지지 않아요. 같은 계정으로 다시 로그인하면 그대로 이어져요.</p>`;
+      <div class="pair-actions"><button class="btn danger block" data-act="leavePair">상대와 연결 끊기</button>
+      <button class="btn ghost block" data-act="unpair">이 기기에서 로그아웃</button></div>
+      <p class="note"><b>연결 끊기</b>: 두 사람 모두 연결이 끊기고, 새 초대 코드로 다시 연결할 수 있어요. 지금까지의 일정·메모는 이 기기에 보관돼서 다시 연결할 때 가져올 수 있어요.<br/><b>로그아웃</b>: 이 기기에서만 나가요. 같은 계정으로 다시 로그인하면 그대로 이어져요.</p>`;
   } else if (c.status === 'signed-in') {
     body = `<div class="pair-who">${esc(c.email || '로그인됨')}로 로그인했어요</div>
       <div class="field" style="padding:16px 20px 0"><label>내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' || me().name === '상대' ? '' : me().name)}" placeholder="상대에게 보일 이름" /></div>
       <div class="pair-box"><b>처음 시작하는 사람</b><span>우리 둘만 아는 숫자로 초대 코드를 정해요 (4~8자리). 비워두면 자동으로 만들어요.</span>
         <input id="p-mycode" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="예: 1004" class="code-input" value="${esc(S.myCode || '')}" />
+        ${c.hasLastDb ? `<button type="button" class="chkline carry" data-act="toggleCarry"><span class="chk ${S.carry !== false ? 'on' : ''}">${S.carry !== false ? ICON.check : ''}</span>이전 일정·메모·사진 가져오기 (${c.lastDbCount}개)</button>` : ''}
         <button class="btn block" data-act="createPair">초대 코드 만들기</button></div>
       <div class="pair-box"><b>초대 코드를 받은 사람</b><span>상대가 보낸 숫자를 입력해요</span>
         <input id="p-code" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="초대 코드" class="code-input" value="${esc(S.pairCode || '')}" />
@@ -1465,7 +1469,7 @@ const actions = {
     const n = ($('#p-name') || {}).value || ''; const mc = (($('#p-mycode') || {}).value || '').replace(/\D/g, '');
     S.myCode = mc;
     if (mc && (mc.length < 4 || mc.length > 8)) { toast('코드는 숫자 4~8자리로 정해주세요'); return; }
-    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim(), mc); });
+    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim(), mc, C().hasLastDb && S.carry !== false); });
   },
   setCode: () => {
     const mc = (($('#p-mycode') || {}).value || '').replace(/\D/g, '');
@@ -1496,7 +1500,14 @@ const actions = {
     try { await navigator.clipboard.writeText(text); toast('초대 코드를 복사했어요'); } catch { toast(code); }
   },
   copyCode: async () => { const code = C() && C().code; if (!code) return; try { await navigator.clipboard.writeText(code); toast('코드를 복사했어요'); } catch { toast(code); } },
-  unpair: () => confirmSheet('이 기기의 연결을 해제할까요?', '서버의 데이터는 그대로 남아요', '해제', async () => {
+  toggleCarry: () => { S.carry = S.carry === false; render(false, true); },
+  leavePair: () => confirmSheet('상대와 연결을 끊을까요?', `${esc(you().name)}의 휴대폰도 함께 연결이 끊겨요.<br/>지금까지의 일정·메모는 이 기기에 보관되고,<br/>새 초대 코드로 다시 연결할 수 있어요.`, '연결 끊기', () => {
+    sessionStorage.setItem('nneow.openPair', '1'); cloudTry(() => C().leaveCouple());
+  }, true),
+  cancelInvite: () => confirmSheet('초대를 취소할까요?', '새 초대 코드로 다시 시작할 수 있어요', '취소하기', () => {
+    sessionStorage.setItem('nneow.openPair', '1'); cloudTry(() => C().leaveCouple());
+  }, true),
+  unpair: () => confirmSheet('이 기기에서 로그아웃할까요?', '상대와의 연결은 그대로예요. 같은 계정으로 다시 로그인하면 이어져요', '로그아웃', async () => {
     await C().disconnect(); const u = new URL(location.href); u.searchParams.delete('as'); location.replace(u.pathname + u.search);
   }, true),
   exportICS: () => shareOrDownload(buildICS(visibleEvents(ME)), 'nneow.ics'),
@@ -1762,6 +1773,7 @@ document.addEventListener('submit', (e) => {
 });
 
 /* ================= 시작 ================= */
+if (sessionStorage.getItem('nneow.leftMsg')) { sessionStorage.removeItem('nneow.leftMsg'); setTimeout(() => toast('상대가 연결을 끊었어요. 새 초대 코드로 다시 연결할 수 있어요'), 600); }
 if (sessionStorage.getItem('nneow.openPair')) { sessionStorage.removeItem('nneow.openPair'); S.screen = 'pair'; history.replaceState({ screen: 'list' }, ''); history.pushState({ screen: 'pair' }, ''); }
 render();
 loadWeather();

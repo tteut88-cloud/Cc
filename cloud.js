@@ -126,6 +126,7 @@ function subscribe(cid) {
   st.coupleUnsub = fs.collection('couples').doc(cid).onSnapshot((d) => {
     st.members = d.exists ? (d.data().members || []).length : 0;
     st.code = d.exists ? (d.data().code || '') : '';
+    if (d.exists && d.data().endedAt && !st.leaving) { partnerLeft(); return; } // 상대가 연결을 끊음
     const c = info(); if (c && st.code && c.code !== st.code) setInfo({ ...c, code: st.code });
     hooks.onStatus();
   }, () => {});
@@ -191,20 +192,87 @@ async function pickCode(wanted) {
   throw new Error('코드를 만들지 못했어요. 다시 시도해 주세요');
 }
 
-async function createCouple(myName, wantedCode) {
+async function createCouple(myName, wantedCode, carry) {
   const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
   const code = await pickCode(cleanCode(wantedCode)); // 먼저 번호를 확인해서 빈 캘린더가 남지 않게
   const ref = fs.collection('couples').doc();
   await ref.set({ members: [u.uid], roles: { [u.uid]: 'a' }, code, createdAt: Date.now() });
   try { await fs.collection('invites').doc(code).set({ cid: ref.id, createdBy: u.uid, fromName: myName || '', createdAt: Date.now() }); }
   catch (e) { throw new Error(e.code === 'permission-denied' ? '이미 누가 쓰고 있는 번호예요. 다른 숫자로 정해주세요' : (e.message || '코드를 만들지 못했어요')); }
-  const db0 = hooks.emptyDb(); db0.users.a.name = myName || db0.users.a.name;
-  const col = docsCol(ref.id); const b = fs.batch();
-  flatten(db0).forEach((json, k) => b.set(col.doc(k), { col: k.split('__')[0], json, by: u.uid, at: firebase.firestore.FieldValue.serverTimestamp() }));
-  await b.commit();
+  const prev = carry ? lastDb() : null;
+  const db0 = prev ? prev : hooks.emptyDb();
+  if (myName) db0.users.a.name = myName;
+  await uploadAll(ref.id, db0, u.uid);
+  localStorage.removeItem(LAST);
   setInfo({ cid: ref.id, role: 'a', uid: u.uid, code });
   hooks.resetLocal(ref.id, db0);
   return code;
+}
+
+/* 처음 올릴 때: 문서가 많거나 사진이 커도 나눠서 올림 */
+async function uploadAll(cid, db0, uidv) {
+  const col = docsCol(cid); let b = fs.batch(), n = 0, bytes = 0;
+  for (const [k, json] of flatten(db0)) {
+    if (n >= 400 || bytes + json.length > 4e6) { await b.commit(); b = fs.batch(); n = 0; bytes = 0; }
+    b.set(col.doc(k), { col: k.split('__')[0], json, by: uidv, at: firebase.firestore.FieldValue.serverTimestamp() }); n++; bytes += json.length;
+  }
+  if (n) await b.commit();
+}
+
+/* ---------- 상대와 연결 끊기 ----------
+ * 나를 couples.members 에서 빼고 endedAt 표시 → 상대 기기도 알아채고 스스로 빠짐 → 둘 다 새 초대 코드로 다시 연결 가능
+ * 지금까지의 데이터는 이 기기에 보관해 두었다가, 다시 연결할 때 '가져오기' 가능
+ */
+const LAST = 'nneow.lastDb';
+function keepLastDb(c) {
+  const d = JSON.parse(JSON.stringify(hooks.getDb()));
+  if (c.role === 'b') swapRoles(d); // 다음에 내가 코드를 만들면 내가 'a'
+  d.notifs = []; d.pokes = []; d.moods = {};
+  const save = (x) => { try { localStorage.setItem(LAST, JSON.stringify(x)); return true; } catch { return false; } };
+  try { localStorage.removeItem('nneow.couple.' + c.cid); } catch { /* 무시 */ }
+  if (save(d)) return;
+  (d.gallery || []).forEach((g) => { g.src = ''; }); // 용량이 모자라면 원본 사진은 빼고 보관
+  if (save(d)) return;
+  d.gallery = []; save(d);
+}
+function lastDb() { try { const x = JSON.parse(localStorage.getItem(LAST)); return x && x.users ? x : null; } catch { return null; } }
+function swapRoles(d) {
+  const sw = (r) => (r === 'a' ? 'b' : r === 'b' ? 'a' : r);
+  const swapKeys = (o) => (o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [sw(k), v])) : o);
+  d.users = swapKeys(d.users); d.photos = { a: {}, b: {} };
+  (d.events || []).forEach((e) => { e.owner = sw(e.owner); e.doneBy = swapKeys(e.doneBy); (e.notes || []).forEach((n) => { n.by = sw(n.by); }); });
+  ['deadlines', 'memos', 'todos', 'moodLog', 'gallery'].forEach((k) => (d[k] || []).forEach((x) => { x.owner = sw(x.owner); }));
+  (d.stickers || []).forEach((x) => { x.from = sw(x.from); x.to = sw(x.to); });
+}
+async function leaveCouple() {
+  const c = info(); const u = auth && auth.currentUser;
+  if (!c || !u) throw new Error('연결된 상대가 없어요');
+  st.leaving = true;
+  await flush().catch(() => {});
+  keepLastDb(c);
+  const code = st.code || c.code;
+  if (code) await fs.collection('invites').doc(code).delete().catch(() => {});
+  await fs.collection('couples').doc(c.cid).update({
+    members: firebase.firestore.FieldValue.arrayRemove(u.uid),
+    [`roles.${u.uid}`]: firebase.firestore.FieldValue.delete(),
+    endedAt: Date.now(),
+  });
+  if (st.unsub) st.unsub(); if (st.coupleUnsub) st.coupleUnsub();
+  setInfo(null);
+  hooks.resetLocal(c.cid, null);
+}
+async function partnerLeft() {
+  const c = info(); const u = auth && auth.currentUser; if (!c || !u || st.leaving) return;
+  st.leaving = true;
+  if (st.unsub) st.unsub(); if (st.coupleUnsub) st.coupleUnsub();
+  keepLastDb(c);
+  await fs.collection('couples').doc(c.cid).update({
+    members: firebase.firestore.FieldValue.arrayRemove(u.uid),
+    [`roles.${u.uid}`]: firebase.firestore.FieldValue.delete(),
+  }).catch(() => {});
+  setInfo(null);
+  sessionStorage.setItem('nneow.leftMsg', '1');
+  hooks.resetLocal(c.cid, null);
 }
 
 /* 상대가 들어오기 전, 코드를 새로 정하거나 바꾸기 */
@@ -282,7 +350,9 @@ function start(h) {
 
 window.nneowCloud = {
   available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, joinCouple, changeCode, disconnect,
-  addPassword,
+  addPassword, leaveCouple,
+  get hasLastDb() { return !!lastDb(); },
+  get lastDbCount() { const d = lastDb(); return d ? (d.events || []).length + (d.memos || []).length + (d.gallery || []).length : 0; },
   sameOriginAuth: SAME_ORIGIN_AUTH,
   get hasPassword() { const u = auth && auth.currentUser; return !!(u && (st.pwSet || u.providerData.some((p) => p.providerId === 'password'))); },
   get code() { const c = info(); return st.code || (c && c.code) || ''; },
