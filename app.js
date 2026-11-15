@@ -407,7 +407,10 @@ SCREENS.month = () => {
       const memo = memosOn(s).length > 0;
       const dw = dayWx(s); const rain = dw && isRain(dw.code); const snow = dw && isSnow(dw.code);
       const dlEnd = evs.some((x) => x.deadline && x.end === s);
-      const photo = S.photoMode && !out && db.photos[owner][s];
+      // 갤러리: 두 사람의 사진을 함께 보여줌 (보고 있는 캘린더 주인의 사진이 크게, 다른 사람 사진은 작게)
+      const other = owner === ME ? YOU : ME;
+      const photo = S.photoMode && !out && (db.photos[owner][s] || db.photos[other][s]);
+      const subPhoto = photo && db.photos[owner][s] && db.photos[other][s];
       cells += `
         <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${s === t ? 'today' : ''} ${S.rangeStart === s ? 'range-start' : ''} ${S.photoMode ? 'pmode' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
@@ -415,7 +418,7 @@ SCREENS.month = () => {
             ${!out && (rain || snow) ? `<span class="sticker ${snow ? 'snow' : ''}"></span>` : ''}
             <span class="num ${memo && !out ? 'memo' : ''}">${d.getDate()}</span>${!out && rain ? '<span class="rainline"></span>' : ''}
           </div>
-          ${photo ? `<img class="cell-photo" src="${photo.img}" alt="" />` : ''}
+          ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" />${subPhoto ? `<img class="cell-photo-sub" src="${subPhoto.img}" alt="" />` : ''}</div>` : ''}
           ${!out && dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
     }
@@ -1048,23 +1051,24 @@ function pickFile(cb) {
   i.onchange = () => i.files[0] && cb(i.files[0]); i.click();
 }
 function photoDay(s) {
-  const owner = S.viewPartner ? YOU : ME;
-  const ph = db.photos[owner][s];
-  if (owner !== ME) {
-    if (!ph) { toast('사진이 없는 날이에요'); return; }
-    openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div><img class="photo-view" src="${ph.img}" alt="" />`);
-    return;
-  }
+  const mine = db.photos[ME][s]; const theirs = db.photos[YOU][s];
   const upload = () => pickFile(async (f) => {
     const src = await shrinkImage(f, 1280);
-    cropSheet(src, (img) => { db.photos[ME][s] = { img, src, at: Date.now() }; save(); render(); toast('사진을 넣었어요'); });
+    cropSheet(src, (img) => {
+      const had = !!db.photos[ME][s];
+      db.photos[ME][s] = { img, src, at: Date.now() };
+      notify('photo', `${me().name}님이 ${fmtDate(s)}에 사진을 ${had ? '바꿨어요' : '올렸어요'}`);
+      save(); render(); toast(`사진을 올렸어요 · ${you().name}에게도 보여요`);
+    });
   });
-  if (!ph) { upload(); return; }
+  if (!mine && !theirs) { upload(); return; }
+  const fig = (ph, who) => `<figure class="ph-fig"><img class="photo-view" src="${ph.img}" alt="" /><figcaption>${who} · ${ago(ph.at || Date.now())}</figcaption></figure>`;
   openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
-    <img class="photo-view" src="${ph.img}" alt="" />
-    <div class="actions"><button class="btn ghost" data-act="phAdjust">확대 · 위치 조정</button><button class="btn ghost" data-act="phChange">사진 바꾸기</button></div>
-    <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="phDay">이 날 일정 보기</button><button class="btn danger" data-act="phDelete">삭제</button></div>`);
-  actions.phAdjust = () => { closeSheet(); cropSheet(ph.src || ph.img, (img) => { ph.img = img; save(); render(); toast('조정했어요'); }); };
+    <div class="ph-list">${mine ? fig(mine, '내 사진') : ''}${theirs ? fig(theirs, esc(you().name) + '의 사진') : ''}</div>
+    ${mine ? `<div class="actions"><button class="btn ghost" data-act="phAdjust">확대 · 위치 조정</button><button class="btn ghost" data-act="phChange">사진 바꾸기</button></div>
+      <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="phDay">이 날 일정 보기</button><button class="btn danger" data-act="phDelete">내 사진 삭제</button></div>`
+    : `<div class="actions"><button class="btn" data-act="phChange">내 사진도 올리기</button><button class="btn ghost" data-act="phDay">이 날 일정 보기</button></div>`}`);
+  actions.phAdjust = () => { closeSheet(); cropSheet(mine.src || mine.img, (img) => { mine.img = img; mine.at = Date.now(); save(); render(); toast('조정했어요'); }); };
   actions.phChange = () => { closeSheet(); upload(); };
   actions.phDelete = () => { delete db.photos[ME][s]; save(); closeSheet(); render(); };
   actions.phDay = () => { closeSheet(); go('day', { sel: s }); };
