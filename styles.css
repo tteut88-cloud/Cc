@@ -608,3 +608,5 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .pair-mail { font-size: 1.1em; font-weight: 800; padding: 12px 18px; margin: 8px 0 4px; background: var(--soft); border-radius: 14px; word-break: break-all; }
 .pair-who { margin: 18px 20px 0; padding: 10px 14px; border-radius: 12px; background: var(--soft); font-size: .85em; color: var(--muted); text-align: center; word-break: break-all; }
 .pair-box .lbl-sm { margin: 4px 0 -2px; }
+.code-input { text-align: center; font-size: 1.5em !important; font-weight: 800; letter-spacing: .35em; }
+.pair-code { letter-spacing: .25em; }
