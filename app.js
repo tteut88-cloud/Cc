@@ -81,7 +81,7 @@ const STICKERS = {
   star: { label: '별', svg: '<svg class="stk" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9z" fill="#ffd23f" stroke="#e7b500" stroke-width="1.2" stroke-linejoin="round"/><circle cx="9.6" cy="10" r="1" fill="#fff" opacity=".8"/></svg>' },
   clover: { label: '네잎클로버', svg: '<svg class="stk" viewBox="0 0 24 24"><g fill="#55c271" stroke="#2f9a4d" stroke-width="1" stroke-linejoin="round"><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(0 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(90 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(180 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(270 12 12)"/></g><circle cx="12" cy="12" r="1.3" fill="#2f9a4d"/></svg>' },
 };
-const catFace = () => '<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 15 L9.5 4.5 L16 8.6 A14 14 0 0 1 24 8.6 L30.5 4.5 L32 15 A14 14 0 1 1 8 15 Z"/></svg>';
+const catFace = () => '<svg class="face cat-face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8 L7.5 -1.5 L15.5 3.6 A17 17 0 0 1 24.5 3.6 L32.5 -1.5 L32 8 A17 17 0 1 1 8 8 Z"/></svg>';
 const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/>${(FACES[k] || FACES.smile).d}</svg>`;
 
 /* ================= 저장소 ================= */
@@ -825,23 +825,31 @@ SCREENS.pair = () => {
       ${emailFormHTML()}
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
   } else if (CLOUD && c.members < 2 && CLOUD.role === 'a') {
-    body = `<div class="pair-hero"><span>상대 휴대폰의 nneow에서<br/>이 초대 코드를 입력해 주세요</span>
-      <div class="pair-code">${esc(CLOUD.code || '------')}</div>
+    body = `<div class="pair-hero"><span>초대를 보냈어요</span>
+      <div class="pair-mail">${esc(CLOUD.partnerEmail || '')}</div>
+      <span>상대가 nneow에서 <b>이 이메일로 로그인</b>하면<br/>바로 연결돼요</span>
       <span class="pair-wait">상대를 기다리는 중…</span></div>
-      <div class="pair-actions"><button class="btn block" data-act="shareCode">초대 코드 보내기</button>
-      <button class="btn danger block" data-act="unpair">취소하고 연결 해제</button></div>`;
+      <div class="pair-actions"><button class="btn block" data-act="shareInvite">상대에게 링크 보내기</button>
+      <button class="btn danger block" data-act="unpair">초대 취소</button></div>`;
   } else if (CLOUD) {
     body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
       <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
       <ul class="menu"><li><button data-act="editNames">이름 바꾸기${ICON.right}</button></li></ul>
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>
       <p class="note">연결을 해제해도 서버의 데이터는 지워지지 않아요. 같은 계정으로 다시 로그인하면 그대로 이어져요.</p>`;
+  } else if (c.status === 'invited') {
+    const inv = c.invite || {};
+    body = `<div class="pair-hero"><img src="assets/icons/logo.png" alt="" class="pair-logo" /><b>${esc(inv.fromName || '상대')}님이 초대했어요</b><span>${esc(inv.fromEmail || '')}</span></div>
+      <div class="field" style="padding:0 20px"><label>내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' || me().name === '상대' ? '' : me().name)}" placeholder="상대에게 보일 이름" /></div>
+      <div class="pair-actions"><button class="btn block" data-act="acceptPair">연결하기</button>
+      <button class="btn ghost block" data-act="logout">다른 계정으로 로그인</button></div>`;
   } else if (c.status === 'signed-in') {
-    body = `<div class="field" style="padding:20px 20px 0"><label>내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' ? '' : me().name)}" placeholder="상대에게 보일 이름" /></div>
-      <div class="pair-box"><b>처음 시작하는 사람</b><span>초대 코드를 만들어 상대에게 보내요</span><button class="btn block" data-act="createPair">초대 코드 만들기</button></div>
-      <div class="pair-box"><b>초대 코드를 받은 사람</b><span>상대가 보낸 6자리 코드를 입력해요</span>
-        <input id="p-code" maxlength="8" placeholder="예: K7M2QX" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.2em;font-weight:700;text-align:center" />
-        <button class="btn block" data-act="joinPair">연결하기</button></div>
+    body = `<div class="pair-who">${esc(c.email || '로그인됨')}로 로그인했어요</div>
+      <div class="pair-box"><b>상대 초대하기</b><span>상대가 nneow에 로그인할 이메일을 넣어주세요. 상대가 그 이메일로 로그인하면 바로 연결돼요.</span>
+        <label class="lbl-sm">내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' ? '' : me().name)}" placeholder="상대에게 보일 이름" />
+        <label class="lbl-sm">상대 이메일</label><input id="p-email" type="email" autocomplete="off" placeholder="partner@example.com" value="${esc(S.partnerEmail || '')}" />
+        <button class="btn block" data-act="createPair">초대하기</button></div>
+      <p class="note">상대가 먼저 나를 초대했다면, 로그인하는 순간 초대가 떠요.</p>
       <div class="pair-actions"><button class="btn ghost block" data-act="logout">다른 계정으로 로그인</button></div>`;
   } else {
     body = `<div class="pair-hero"><img src="assets/icons/logo.png" alt="" class="pair-logo" /><b>상대 휴대폰과 연결하기</b>
@@ -851,10 +859,9 @@ SCREENS.pair = () => {
       ${emailFormHTML()}
       <p class="note">휴대폰을 바꿔도 같은 구글 계정 / 이메일로 로그인하면 그대로 이어져요.</p>`;
   }
-  const diag = S.diag ? `<div class="diag">${S.diag.map((d) => `<div class="diag-row ${d.ok ? 'ok' : 'bad'}"><span>${d.ok ? '✓' : '✕'}</span><b>${esc(d.name)}</b><em>${esc(d.info || (d.ok ? '정상' : '문제 있음'))}</em></div>`).join('')}</div>` : '';
   const err = S.cloudErr ? `<div class="warn-box err"><b>연결 오류</b><span>${esc(S.cloudErr)}</span></div>` : '';
   return `<section class="screen">${topbar('상대 휴대폰과 연결')}<div class="scroll">${err}${body}
-    <div class="pair-actions"><button class="btn ghost block" data-act="runDiag">연결 진단하기</button></div>${diag}<div style="height:30px"></div></div></section>`;
+<div style="height:30px"></div></div></section>`;
 };
 async function cloudTry(fn, okMsg) {
   S.cloudErr = '';
@@ -1407,19 +1414,20 @@ const actions = {
     else if (!IS_IOS) location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
     else toast('오른쪽 아래 … 메뉴에서 ‘Safari로 열기’를 눌러주세요');
   },
-  runDiag: async () => { if (!C()) return; toast('진단 중…'); S.diag = await C().diagnose(); render(false, true); },
+
   loginAnon: () => cloudTry(() => C().signInAnon()),
   logout: () => cloudTry(() => C().disconnect()),
-  createPair: () => { const n = ($('#p-name') || {}).value || ''; cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim()); }); },
-  joinPair: () => {
-    const n = ($('#p-name') || {}).value || ''; const code = ($('#p-code') || {}).value || '';
-    if (code.trim().length < 6) { toast('6자리 초대 코드를 입력해 주세요'); return; }
-    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().joinCouple(code, n.trim()); });
+  createPair: () => {
+    const n = ($('#p-name') || {}).value || ''; const em = (($('#p-email') || {}).value || '').trim();
+    S.partnerEmail = em;
+    if (!em.includes('@')) { toast('상대 이메일을 입력해 주세요'); return; }
+    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim(), em); });
   },
-  shareCode: async () => {
-    const text = `nneow 초대 코드: ${CLOUD.code}\n${location.origin + location.pathname}`;
+  acceptPair: () => { const n = ($('#p-name') || {}).value || ''; cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().acceptInvite(n.trim()); }); },
+  shareInvite: async () => {
+    const text = `nneow에서 나랑 캘린더 같이 쓰자! ${CLOUD.partnerEmail || ''} 이메일로 로그인하면 바로 연결돼\n${location.origin + location.pathname}`;
     if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* 취소 */ } }
-    try { await navigator.clipboard.writeText(text); toast('초대 코드를 복사했어요'); } catch { toast(CLOUD.code); }
+    try { await navigator.clipboard.writeText(text); toast('링크를 복사했어요'); } catch { toast(location.origin + location.pathname); }
   },
   unpair: () => confirmSheet('이 기기의 연결을 해제할까요?', '서버의 데이터는 그대로 남아요', '해제', async () => {
     await C().disconnect(); const u = new URL(location.href); u.searchParams.delete('as'); location.replace(u.pathname + u.search);

@@ -16,11 +16,10 @@ const CONFIG = {
 };
 const LS = 'nneow.cloud';
 const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes'];
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const available = typeof firebase !== 'undefined';
 let auth = null, fs = null, hooks = null;
-const st = { user: null, unsub: null, coupleUnsub: null, synced: new Map(), timer: null, latest: null, status: 'off', members: 0, error: '' };
+const st = { user: null, unsub: null, coupleUnsub: null, synced: new Map(), timer: null, latest: null, status: 'off', members: 0, error: '', invite: null };
 
 const info = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
 const setInfo = (v) => (v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS));
@@ -143,25 +142,6 @@ async function signInEmail(email, pw) {
     catch (e2) { if (e2.code === 'auth/email-already-in-use') { const x = new Error('비밀번호가 맞지 않아요'); x.code = 'auth/wrong-password'; throw x; } throw e2; }
   }
 }
-/* 연결 진단: 어디서 막혔는지 알려줌 */
-async function diagnose() {
-  const out = [];
-  out.push({ name: '서버 기능 불러오기', ok: available });
-  out.push({ name: '인터넷 연결', ok: navigator.onLine });
-  if (!available) return out;
-  init();
-  const u = auth.currentUser;
-  out.push({ name: '로그인', ok: !!u, info: u ? (u.isAnonymous ? '로그인 없이 시작' : (u.email || '구글 계정')) : '아직 로그인하지 않았어요' });
-  if (u) {
-    try { await fs.collection('invites').doc('PROBE0').get({ source: 'server' }); out.push({ name: 'Firestore 보안 규칙', ok: true, info: '정상' }); }
-    catch (e) { out.push({ name: 'Firestore 보안 규칙', ok: false, info: e.code === 'permission-denied' ? 'nneow 규칙이 게시되지 않았어요' : e.code === 'unavailable' ? '서버에 닿지 않아요' : (e.code || e.message) }); }
-    const c = info();
-    if (c) out.push({ name: '두 사람 연결', ok: st.members >= 2, info: st.members >= 2 ? '연결됨' : '상대를 기다리는 중' });
-  }
-  if (st.error) out.push({ name: '마지막 오류', ok: false, info: st.error });
-  return out;
-}
-
 /* 같은 계정으로 다른 기기에서 로그인하면 기존 연결을 찾아줌 */
 async function findCouple() {
   const u = auth.currentUser; if (!u) return null;
@@ -171,34 +151,46 @@ async function findCouple() {
   return role ? { cid: d.id, role, uid: u.uid } : null;
 }
 
-function makeCode() { let s = ''; const r = crypto.getRandomValues(new Uint32Array(6)); r.forEach((n) => { s += CODE_CHARS[n % CODE_CHARS.length]; }); return s; }
+/* ---------- 이메일로 초대 ----------
+ * A가 상대 이메일을 입력 → emailInvites/{상대 이메일} 생성
+ * B가 그 이메일로 로그인하면 초대를 찾아 바로 연결 (코드 필요 없음)
+ */
+const myEmail = () => ((auth && auth.currentUser && auth.currentUser.email) || '').trim().toLowerCase();
+const normEmail = (e) => String(e || '').trim().toLowerCase();
+async function checkInvite() {
+  const em = myEmail(); if (!em) return null;
+  const d = await fs.collection('emailInvites').doc(em).get().catch(() => null);
+  return d && d.exists ? d.data() : null;
+}
 
-async function createCouple(myName) {
+async function createCouple(myName, partnerEmail) {
   const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
+  const pe = normEmail(partnerEmail);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(pe)) throw new Error('상대 이메일을 확인해 주세요');
+  if (pe === myEmail()) throw new Error('내 이메일이에요. 상대가 로그인할 이메일을 넣어주세요');
+  // 상대가 먼저 나를 초대했다면 그 초대로 바로 연결
+  const mine = await checkInvite();
+  if (mine) { await joinCouple(mine.cid, myName); return 'joined'; }
   const ref = fs.collection('couples').doc();
   await ref.set({ members: [u.uid], roles: { [u.uid]: 'a' }, createdAt: Date.now() });
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code = makeCode();
-    const inv = fs.collection('invites').doc(code);
-    try { await inv.set({ cid: ref.id, createdBy: u.uid, createdAt: Date.now() }); break; } catch (e) { if (i === 4) throw e; }
+  try {
+    await fs.collection('emailInvites').doc(pe).set({ cid: ref.id, createdBy: u.uid, fromName: myName || '', fromEmail: myEmail(), createdAt: Date.now() });
+  } catch (e) {
+    await ref.delete().catch(() => {});
+    if (e.code === 'permission-denied') throw new Error('이 이메일은 이미 다른 사람이 초대했어요');
+    throw e;
   }
   const db0 = hooks.emptyDb(); db0.users.a.name = myName || db0.users.a.name;
   const col = docsCol(ref.id); const b = fs.batch();
   flatten(db0).forEach((json, k) => b.set(col.doc(k), { col: k.split('__')[0], json, by: u.uid, at: firebase.firestore.FieldValue.serverTimestamp() }));
   await b.commit();
-  setInfo({ cid: ref.id, role: 'a', uid: u.uid, code });
+  setInfo({ cid: ref.id, role: 'a', uid: u.uid, partnerEmail: pe });
   hooks.resetLocal(ref.id, db0);
-  return code;
+  return 'invited';
 }
 
-async function joinCouple(code, myName) {
+async function joinCouple(cid, myName) {
   const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
-  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const inv = await fs.collection('invites').doc(code).get();
-  if (!inv.exists) throw new Error('초대 코드를 찾을 수 없어요');
-  const cid = inv.data().cid;
-  if (inv.data().createdBy === u.uid) throw new Error('내가 만든 코드예요. 상대 휴대폰에서 입력해 주세요');
   try {
     await fs.collection('couples').doc(cid).update({
       members: firebase.firestore.FieldValue.arrayUnion(u.uid),
@@ -214,13 +206,21 @@ async function joinCouple(code, myName) {
   const base = ub.exists ? JSON.parse(ub.data().json) : hooks.emptyDb().users.b;
   if (myName) base.name = myName;
   await col.doc('users__b').set({ col: 'users', json: JSON.stringify(base), by: u.uid, at: firebase.firestore.FieldValue.serverTimestamp() });
-  await fs.collection('invites').doc(code).delete().catch(() => {});
+  await fs.collection('emailInvites').doc(myEmail()).delete().catch(() => {});
   setInfo({ cid, role: 'b', uid: u.uid });
   hooks.resetLocal(cid, null);
+}
+async function acceptInvite(myName) {
+  const inv = st.invite || await checkInvite();
+  if (!inv) throw new Error('초대를 찾을 수 없어요');
+  await joinCouple(inv.cid, myName);
 }
 
 async function disconnect() {
   await flush().catch(() => {});
+  const c = info();
+  // 상대가 아직 안 들어온 초대는 함께 취소
+  if (c && c.role === 'a' && c.partnerEmail && st.members < 2 && fs) await fs.collection('emailInvites').doc(c.partnerEmail).delete().catch(() => {});
   if (st.unsub) st.unsub(); if (st.coupleUnsub) st.coupleUnsub();
   setInfo(null);
   if (auth) await auth.signOut().catch(() => {});
@@ -241,14 +241,17 @@ function start(h) {
       // 다른 기기에서 이미 연결해 둔 계정이면 자동으로 이어 붙임
       const found = await findCouple().catch(() => null);
       if (found) { setInfo(found); hooks.resetLocal(found.cid, null); return; }
-      st.status = 'signed-in'; hooks.onStatus(); return;
+      st.invite = await checkInvite(); // 누가 내 이메일로 초대했는지
+      st.status = st.invite ? 'invited' : 'signed-in'; hooks.onStatus(); return;
     }
     st.status = 'off'; hooks.onStatus();
   });
 }
 
 window.nneowCloud = {
-  available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, diagnose, createCouple, joinCouple, disconnect,
+  available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, acceptInvite, disconnect,
+  get email() { return myEmail(); },
+  get invite() { return st.invite; },
   get status() { return st.status; },
   get user() { return st.user; },
   get members() { return st.members; },

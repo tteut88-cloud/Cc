@@ -602,3 +602,9 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .diag-row.ok span { color: #2f9a4d; }
 .diag-row.bad span { color: var(--red); }
 .diag-row em { font-style: normal; color: var(--muted); text-align: right; word-break: break-all; }
+
+/* 고양이 얼굴: 머리 원은 스마일과 같은 크기, 귀는 위로 살짝 나옴 */
+.face.cat-face { overflow: visible; }
+.pair-mail { font-size: 1.1em; font-weight: 800; padding: 12px 18px; margin: 8px 0 4px; background: var(--soft); border-radius: 14px; word-break: break-all; }
+.pair-who { margin: 18px 20px 0; padding: 10px 14px; border-radius: 12px; background: var(--soft); font-size: .85em; color: var(--muted); text-align: center; word-break: break-all; }
+.pair-box .lbl-sm { margin: 4px 0 -2px; }
