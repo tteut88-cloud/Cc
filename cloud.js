@@ -6,13 +6,13 @@
 'use strict';
 
 const CONFIG = {
-  apiKey: 'AIzaSyCzGYjebevBG2IoSqJc8rT2YimeolJendY',
-  authDomain: 'nneow-5a0ac.firebaseapp.com',
-  projectId: 'nneow-5a0ac',
-  storageBucket: 'nneow-5a0ac.firebasestorage.app',
-  messagingSenderId: '615200908922',
-  appId: '1:615200908922:web:d48bf45378f9c968c93dc3',
-  measurementId: 'G-2J39P64M36',
+  apiKey: 'AIzaSyDzYZev5ns3imqyeSEiF7rN6bb7sSyTaHk',
+  authDomain: 'meow-ced8f.firebaseapp.com',
+  projectId: 'meow-ced8f',
+  storageBucket: 'meow-ced8f.firebasestorage.app',
+  messagingSenderId: '89386576660',
+  appId: '1:89386576660:web:1e9fe60a53f50a4bc43001',
+  measurementId: 'G-62DG7T6JZD',
 };
 const LS = 'nneow.cloud';
 const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes'];
@@ -22,7 +22,9 @@ let auth = null, fs = null, hooks = null;
 const st = { code: '', user: null, unsub: null, coupleUnsub: null, synced: new Map(), timer: null, latest: null, status: 'off', members: 0, error: '', invite: null };
 
 const info = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
-const setInfo = (v) => (v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS));
+const setInfo = (v) => (v ? localStorage.setItem(LS, JSON.stringify({ ...v, pid: CONFIG.projectId })) : localStorage.removeItem(LS));
+// 예전 Firebase 프로젝트로 연결해 둔 기록은 지워서 새 프로젝트로 깨끗하게 시작
+{ const c = info(); if (c && c.pid !== CONFIG.projectId) localStorage.removeItem(LS); }
 
 function init() {
   if (!available || auth) return;

@@ -37,7 +37,7 @@ Firebase 콘솔에서 한 번만 해둘 것:
 3. 앱을 올린 주소를 Authentication → 설정 → **승인된 도메인**에 추가 (Firebase Hosting 주소는 자동 등록)
 
 배포 (둘 중 하나):
-- Firebase Hosting: `npm i -g firebase-tools && firebase login && firebase deploy` → `https://nneow-5a0ac.web.app` (보안 규칙도 같이 배포됨)
+- Firebase Hosting: `npm i -g firebase-tools && firebase login && firebase deploy` → `https://meow-ced8f.web.app` (보안 규칙도 같이 배포됨)
 - Netlify Drop: 폴더를 https://app.netlify.com/drop 에 끌어다 놓기 → 받은 주소를 승인된 도메인에 추가
 
 로컬 테스트: `firebase emulators:start --only auth,firestore` 실행 후 `http://localhost:8000/?emu=1`
