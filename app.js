@@ -153,7 +153,7 @@ function ensureShape(d) {
   // 예전 '날짜별 사진'을 공유 갤러리로 옮김 (id가 같아서 두 기기에서 옮겨도 중복되지 않음)
   ['a', 'b'].forEach((r) => Object.entries(d.photos[r]).forEach(([date, o]) => {
     const id = `ph_${r}_${date}`;
-    if (o && o.img && !d.gallery.some((g) => g.id === id)) d.gallery.push({ id, owner: r, date, img: o.img, src: o.src || '', caption: '', at: o.at || Date.now() });
+    if (o && o.img && !d.gallery.some((g) => g.id === id)) d.gallery.push({ id, owner: r, date, img: o.img, src: o.src || '', caption: '', at: o.at || Date.now(), onCal: true });
   }));
   d.photos = { a: {}, b: {} };
   return d;
@@ -253,7 +253,7 @@ function listToday(who) {
     .sort((a, b) => (isTimed(a) ? 1 : 0) - (isTimed(b) ? 1 : 0) || (a.startTime || '').localeCompare(b.startTime || ''));
 }
 function progressOf(who) { const l = listToday(who); const done = l.filter((e) => isDone(e, who)).length; return { total: l.length, done, pct: l.length ? Math.round(done / l.length * 100) : 0 }; }
-const photosOn = (s) => db.gallery.filter((g) => g.date === s).sort((a, b) => b.at - a.at);
+const photosOn = (s) => db.gallery.filter((g) => g.date === s && g.onCal).sort((a, b) => b.at - a.at); // 달력에 붙인 사진만
 const stickerOn = (owner, s) => db.stickers.filter((x) => x.to === owner && x.date === s).sort((a, b) => b.at - a.at)[0];
 const hasEventOn = (owner, s) => visibleEvents(owner).some((e) => covers(e, s));
 
@@ -749,7 +749,7 @@ SCREENS.gallery = () => {
   list.forEach((g) => {
     const d = parse(g.date); const mk = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
     if (mk !== lastM) { html += `${lastM ? '</div>' : ''}<div class="g-head">${mk}</div><div class="g-grid">`; lastM = mk; }
-    html += `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" loading="lazy" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span>${g.caption ? '<span class="g-cap"></span>' : ''}</button>`;
+    html += `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" loading="lazy" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span>${g.caption ? '<span class="g-cap"></span>' : ''}${g.onCal ? '<span class="g-oncal">달력</span>' : ''}</button>`;
   });
   if (lastM) html += '</div>';
   return `<section class="screen">
@@ -825,13 +825,18 @@ SCREENS.pair = () => {
       ${emailFormHTML()}
       <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
   } else if (CLOUD && c.members < 2 && CLOUD.role === 'a') {
-    body = `<div class="pair-hero"><span>상대에게 이 초대 코드를 보내주세요</span>
-      <div class="pair-code">${esc(CLOUD.code || '------')}</div>
+    const code = c.code;
+    body = code ? `<div class="pair-hero"><span>상대에게 이 초대 코드를 보내주세요</span>
+      <div class="pair-code">${esc(code)}</div>
       <span>상대가 nneow에서 로그인하고 이 숫자를 입력하면 연결돼요</span>
       <span class="pair-wait">상대를 기다리는 중…</span></div>
       <div class="pair-actions"><button class="btn block" data-act="shareInvite">초대 코드 보내기</button>
-      <button class="btn ghost block" data-act="copyCode">코드 복사</button>
-      <button class="btn danger block" data-act="unpair">초대 취소</button></div>`;
+      <div class="actions" style="margin:0"><button class="btn ghost" data-act="copyCode">코드 복사</button><button class="btn ghost" data-act="changeCode">코드 바꾸기</button></div>
+      <button class="btn danger block" data-act="unpair">초대 취소</button></div>`
+    : `<div class="pair-hero"><b>초대 코드를 정해주세요</b><span>상대가 입력할 숫자예요 (4~8자리)</span></div>
+      <div class="pair-box"><input id="p-mycode" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="예: 1004" class="code-input" />
+      <button class="btn block" data-act="setCode">이 코드로 정하기</button><button class="btn ghost block" data-act="randomCode">아무 숫자로 만들기</button></div>
+      <div class="pair-actions"><button class="btn danger block" data-act="unpair">초대 취소</button></div>`;
   } else if (CLOUD) {
     body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
       <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
@@ -841,9 +846,11 @@ SCREENS.pair = () => {
   } else if (c.status === 'signed-in') {
     body = `<div class="pair-who">${esc(c.email || '로그인됨')}로 로그인했어요</div>
       <div class="field" style="padding:16px 20px 0"><label>내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' || me().name === '상대' ? '' : me().name)}" placeholder="상대에게 보일 이름" /></div>
-      <div class="pair-box"><b>처음 시작하는 사람</b><span>초대 코드를 만들어 상대에게 보내요</span><button class="btn block" data-act="createPair">초대 코드 만들기</button></div>
-      <div class="pair-box"><b>초대 코드를 받은 사람</b><span>상대가 보낸 숫자 6자리를 입력해요</span>
-        <input id="p-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000" class="code-input" value="${esc(S.pairCode || '')}" />
+      <div class="pair-box"><b>처음 시작하는 사람</b><span>우리 둘만 아는 숫자로 초대 코드를 정해요 (4~8자리). 비워두면 자동으로 만들어요.</span>
+        <input id="p-mycode" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="예: 1004" class="code-input" value="${esc(S.myCode || '')}" />
+        <button class="btn block" data-act="createPair">초대 코드 만들기</button></div>
+      <div class="pair-box"><b>초대 코드를 받은 사람</b><span>상대가 보낸 숫자를 입력해요</span>
+        <input id="p-code" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="초대 코드" class="code-input" value="${esc(S.pairCode || '')}" />
         <button class="btn block" data-act="joinPair">연결하기</button></div>
       <div class="pair-actions"><button class="btn ghost block" data-act="logout">다른 계정으로 로그인</button></div>`;
   } else {
@@ -1132,29 +1139,31 @@ function autoSquare(src, out = 640) {
   });
 }
 /* 사진 올리기: 한 장이면 확대·위치 조정, 여러 장이면 가운데를 정사각형으로 */
-async function addPhotos(files, date) {
+async function addPhotos(files, date, onCal = false) {
   files = files.filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || ''));
   if (!files.length) return;
   if (files.length === 1) {
     const src = await shrinkImage(files[0], 1080);
     if (!src) { toast('사진을 열 수 없어요'); return; }
-    cropSheet(src, (img) => photoInfoSheet([{ img, src }], date));
+    cropSheet(src, (img) => photoInfoSheet([{ img, src }], date, onCal));
     return;
   }
   toast(`${files.length}장을 준비하는 중…`);
   const items = [];
   for (const f of files.slice(0, 30)) { const src = await shrinkImage(f, 1080); if (src) items.push({ img: await autoSquare(src), src }); }
-  photoInfoSheet(items, date);
+  photoInfoSheet(items, date, onCal);
 }
-function photoInfoSheet(items, date = todayStr()) {
+function photoInfoSheet(items, date = todayStr(), onCal = false) {
   openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${items.length > 1 ? `사진 ${items.length}장` : '사진'} 올리기</h3><button class="icon-btn" data-act="phSave">${ICON.check}</button></div>
     <div class="ph-preview">${items.map((x) => `<img src="${x.img}" alt="" />`).join('')}</div>
     <div class="field"><label>날짜</label><input type="date" id="ph-date" value="${date}" /></div>
     <div class="field"><label>메모</label><textarea id="ph-cap" rows="2" placeholder="사진에 남길 메모 (선택)"></textarea></div>
-    <p class="note" style="padding:0">올린 사진은 ${esc(you().name)}의 갤러리와 달력에도 바로 보여요</p>`);
+    <div class="switch-row">달력에도 붙이기<button class="switch ${onCal ? 'on' : ''}" id="ph-cal"></button></div>
+    <p class="note" style="padding:0">사진은 공유 갤러리에 올라가요. ‘달력에도 붙이기’를 켜면 그 날짜 달력(사진 보기)에도 보여요.</p>`, { bind: (sh) => { $('#ph-cal', sh).onclick = (e) => e.currentTarget.classList.toggle('on'); } });
   actions.phSave = () => {
     const d = $('#ph-date', root).value || date; const cap = $('#ph-cap', root).value.trim();
-    items.forEach((x, i) => db.gallery.push({ id: uid(), owner: ME, date: d, img: x.img, src: x.src || '', caption: cap, at: Date.now() + i }));
+    const cal = $('#ph-cal', root).classList.contains('on');
+    items.forEach((x, i) => db.gallery.push({ id: uid(), owner: ME, date: d, img: x.img, src: x.src || '', caption: cap, at: Date.now() + i, onCal: cal }));
     notify('photo', `${me().name}님이 사진 ${items.length > 1 ? items.length + '장을' : '을'} 올렸어요 (${fmtDate(d)})`);
     save(); closeSheet(); render(); toast(`사진을 올렸어요 · ${you().name}에게도 보여요`);
   };
@@ -1174,9 +1183,11 @@ function photoViewer(g) {
       <div class="field"><label>날짜</label><input type="date" id="g-date" value="${g.date}" /></div>`
       : (g.caption ? `<div class="detail-memo">${esc(g.caption)}</div>` : '<div class="empty" style="padding:8px 0">사진 메모가 없어요</div>')}
     ${dayMemos.length ? `<div class="lbl-sm">이 날의 메모</div>${dayMemos.map((m) => `<div class="detail-memo">${esc(m.text) || '사진'}<div class="s" style="font-size:.75em;color:var(--muted);margin-top:4px">${esc(whoName(m.owner))}</div></div>`).join('')}` : ''}
-    ${mine ? `<div class="actions"><button class="btn" data-act="gSave">저장</button><button class="btn ghost" data-act="gAdjust">확대 · 위치 조정</button></div>` : ''}
+    ${mine ? `<div class="switch-row">달력에도 붙이기<button class="switch ${g.onCal ? 'on' : ''}" id="g-cal"></button></div>
+      <div class="actions"><button class="btn" data-act="gSave">저장</button><button class="btn ghost" data-act="gAdjust">확대 · 위치 조정</button></div>` : ''}
     <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="gDay">이 날 일정 보기</button>${mine ? '<button class="btn danger" data-act="gDelete">삭제</button>' : ''}</div>`);
-  actions.gSave = () => { g.caption = $('#g-cap', root).value.trim(); g.date = $('#g-date', root).value || g.date; save(); closeSheet(); render(); toast('저장했어요'); };
+  const gc = $('#g-cal', root); if (gc) gc.onclick = (e) => e.currentTarget.classList.toggle('on');
+  actions.gSave = () => { g.caption = $('#g-cap', root).value.trim(); g.date = $('#g-date', root).value || g.date; g.onCal = $('#g-cal', root).classList.contains('on'); save(); closeSheet(); render(); toast('저장했어요'); };
   actions.gAdjust = () => { closeSheet(); cropSheet(g.src || g.img, (img) => { g.img = img; save(); render(); toast('조정했어요'); photoViewer(g); }); };
   actions.gDelete = () => confirmSheet('이 사진을 삭제할까요?', `${esc(you().name)}의 갤러리에서도 사라져요`, '삭제', () => { db.gallery = db.gallery.filter((x) => x.id !== g.id); save(); render(); }, true);
   actions.gDay = () => { closeSheet(); const d = parse(g.date); S.month = { y: d.getFullYear(), m: d.getMonth() }; go('day', { sel: g.date, viewPartner: false }); };
@@ -1191,7 +1202,7 @@ function photoViewer(g) {
 /* 달력 사진 모드에서 날짜 누르기 */
 function photoDay(s) {
   const list = photosOn(s);
-  const upload = () => pickFiles((files) => addPhotos(files, s));
+  const upload = () => pickFiles((files) => addPhotos(files, s, true)); // 달력에서 올리면 달력에 붙음
   if (!list.length) { upload(); return; }
   openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
     <div class="g-grid sheet-grid">${list.map((g) => `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span></button>`).join('')}</div>
@@ -1412,19 +1423,41 @@ const actions = {
 
   loginAnon: () => cloudTry(() => C().signInAnon()),
   logout: () => cloudTry(() => C().disconnect()),
-  createPair: () => { const n = ($('#p-name') || {}).value || ''; cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim()); }); },
+  createPair: () => {
+    const n = ($('#p-name') || {}).value || ''; const mc = (($('#p-mycode') || {}).value || '').replace(/\D/g, '');
+    S.myCode = mc;
+    if (mc && (mc.length < 4 || mc.length > 8)) { toast('코드는 숫자 4~8자리로 정해주세요'); return; }
+    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim(), mc); });
+  },
+  setCode: () => {
+    const mc = (($('#p-mycode') || {}).value || '').replace(/\D/g, '');
+    if (mc.length < 4 || mc.length > 8) { toast('코드는 숫자 4~8자리로 정해주세요'); return; }
+    cloudTry(() => C().changeCode(mc), '코드를 정했어요');
+  },
+  randomCode: () => cloudTry(() => C().changeCode(''), '코드를 만들었어요'),
+  changeCode: () => {
+    openSheet(`<div class="confirm-text">코드 바꾸기</div><div class="confirm-sub">숫자 4~8자리로 정해주세요</div>
+      <div class="field"><input id="cc-code" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="예: 0214" class="code-input" /></div>
+      <div class="actions"><button class="btn ghost" data-act="close">취소</button><button class="btn" data-act="ccSave">바꾸기</button></div>`, { center: true });
+    actions.ccSave = () => {
+      const mc = ($('#cc-code', root).value || '').replace(/\D/g, '');
+      if (mc.length < 4 || mc.length > 8) { toast('코드는 숫자 4~8자리로 정해주세요'); return; }
+      closeSheet(); cloudTry(() => C().changeCode(mc), '코드를 바꿨어요');
+    };
+  },
   joinPair: () => {
     const n = ($('#p-name') || {}).value || ''; const code = (($('#p-code') || {}).value || '').replace(/\D/g, '');
     S.pairCode = code;
-    if (code.length !== 6) { toast('숫자 6자리를 입력해 주세요'); return; }
+    if (code.length < 4 || code.length > 8) { toast('초대 코드(숫자 4~8자리)를 입력해 주세요'); return; }
     cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().joinCouple(code, n.trim()); });
   },
   shareInvite: async () => {
-    const text = `nneow에서 나랑 캘린더 같이 쓰자!\n초대 코드: ${CLOUD.code}\n${location.origin + location.pathname}`;
+    const code = C() && C().code; if (!code) { toast('먼저 초대 코드를 정해주세요'); return; }
+    const text = `nneow에서 나랑 캘린더 같이 쓰자!\n초대 코드: ${code}\n${location.origin + location.pathname}`;
     if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* 취소 */ } }
-    try { await navigator.clipboard.writeText(text); toast('초대 코드를 복사했어요'); } catch { toast(CLOUD.code); }
+    try { await navigator.clipboard.writeText(text); toast('초대 코드를 복사했어요'); } catch { toast(code); }
   },
-  copyCode: async () => { try { await navigator.clipboard.writeText(CLOUD.code); toast('코드를 복사했어요'); } catch { toast(CLOUD.code); } },
+  copyCode: async () => { const code = C() && C().code; if (!code) return; try { await navigator.clipboard.writeText(code); toast('코드를 복사했어요'); } catch { toast(code); } },
   unpair: () => confirmSheet('이 기기의 연결을 해제할까요?', '서버의 데이터는 그대로 남아요', '해제', async () => {
     await C().disconnect(); const u = new URL(location.href); u.searchParams.delete('as'); location.replace(u.pathname + u.search);
   }, true),

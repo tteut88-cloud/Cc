@@ -21,6 +21,10 @@ service cloud.firestore {
         && request.resource.data.roles[resource.data.members[0]] == 'a'
         && request.resource.data.roles.keys().hasOnly([resource.data.members[0], request.auth.uid])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'roles', 'joinedAt']);
+      // 연결된 사람은 초대 코드만 바꿀 수 있음
+      allow update: if authed()
+        && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['code']);
 
       // 일정 · 메모 · 표정 · 사진 등: 우리 둘만 읽고 쓸 수 있음
       match /docs/{docId} {

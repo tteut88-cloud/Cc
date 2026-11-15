@@ -19,7 +19,7 @@ const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'g
 
 const available = typeof firebase !== 'undefined';
 let auth = null, fs = null, hooks = null;
-const st = { user: null, unsub: null, coupleUnsub: null, synced: new Map(), timer: null, latest: null, status: 'off', members: 0, error: '', invite: null };
+const st = { code: '', user: null, unsub: null, coupleUnsub: null, synced: new Map(), timer: null, latest: null, status: 'off', members: 0, error: '', invite: null };
 
 const info = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
 const setInfo = (v) => (v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS));
@@ -117,7 +117,10 @@ function subscribe(cid) {
   });
   if (st.coupleUnsub) st.coupleUnsub();
   st.coupleUnsub = fs.collection('couples').doc(cid).onSnapshot((d) => {
-    st.members = d.exists ? (d.data().members || []).length : 0; hooks.onStatus();
+    st.members = d.exists ? (d.data().members || []).length : 0;
+    st.code = d.exists ? (d.data().code || '') : '';
+    const c = info(); if (c && st.code && c.code !== st.code) setInfo({ ...c, code: st.code });
+    hooks.onStatus();
   }, () => {});
 }
 
@@ -151,24 +154,29 @@ async function findCouple() {
   return role ? { cid: d.id, role, uid: u.uid } : null;
 }
 
-/* ---------- 초대 코드 (숫자 6자리) ----------
- * A가 코드 만들기 → invites/{코드} 생성 → 상대가 코드 입력하면 연결
+/* ---------- 초대 코드 (숫자 4~8자리, 직접 정하거나 자동) ----------
+ * 코드는 couples/{cid}.code 에도 저장 → 어느 기기에서 다시 로그인해도 코드를 볼 수 있음
  */
 function makeCode() { const r = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000; return String(r).padStart(6, '0'); }
-
-async function createCouple(myName) {
-  const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
-  const ref = fs.collection('couples').doc();
-  await ref.set({ members: [u.uid], roles: { [u.uid]: 'a' }, createdAt: Date.now() });
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code = makeCode();
-    const inv = fs.collection('invites').doc(code);
-    const ex = await inv.get().catch(() => null);
-    if (ex && ex.exists) continue; // 이미 쓰는 번호면 다시
-    await inv.set({ cid: ref.id, createdBy: u.uid, fromName: myName || '', createdAt: Date.now() });
-    break;
+const cleanCode = (c) => String(c || '').replace(/\D/g, '');
+async function codeTaken(code) { const d = await fs.collection('invites').doc(code).get(); return d.exists; }
+async function pickCode(wanted) {
+  if (wanted) {
+    if (!/^\d{4,8}$/.test(wanted)) throw new Error('코드는 숫자 4~8자리로 정해주세요');
+    if (await codeTaken(wanted)) throw new Error('이미 누가 쓰고 있는 번호예요. 다른 숫자로 정해주세요');
+    return wanted;
   }
+  for (let i = 0; i < 8; i++) { const c = makeCode(); if (!(await codeTaken(c))) return c; }
+  throw new Error('코드를 만들지 못했어요. 다시 시도해 주세요');
+}
+
+async function createCouple(myName, wantedCode) {
+  const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
+  const code = await pickCode(cleanCode(wantedCode)); // 먼저 번호를 확인해서 빈 캘린더가 남지 않게
+  const ref = fs.collection('couples').doc();
+  await ref.set({ members: [u.uid], roles: { [u.uid]: 'a' }, code, createdAt: Date.now() });
+  try { await fs.collection('invites').doc(code).set({ cid: ref.id, createdBy: u.uid, fromName: myName || '', createdAt: Date.now() }); }
+  catch (e) { throw new Error(e.code === 'permission-denied' ? '이미 누가 쓰고 있는 번호예요. 다른 숫자로 정해주세요' : (e.message || '코드를 만들지 못했어요')); }
   const db0 = hooks.emptyDb(); db0.users.a.name = myName || db0.users.a.name;
   const col = docsCol(ref.id); const b = fs.batch();
   flatten(db0).forEach((json, k) => b.set(col.doc(k), { col: k.split('__')[0], json, by: u.uid, at: firebase.firestore.FieldValue.serverTimestamp() }));
@@ -178,10 +186,23 @@ async function createCouple(myName) {
   return code;
 }
 
+/* 상대가 들어오기 전, 코드를 새로 정하거나 바꾸기 */
+async function changeCode(wantedCode) {
+  const c = info(); const u = auth && auth.currentUser;
+  if (!c || !u) throw new Error('로그인이 필요해요');
+  const old = st.code || c.code;
+  const code = await pickCode(cleanCode(wantedCode));
+  await fs.collection('invites').doc(code).set({ cid: c.cid, createdBy: u.uid, createdAt: Date.now() });
+  await fs.collection('couples').doc(c.cid).update({ code });
+  if (old && old !== code) await fs.collection('invites').doc(old).delete().catch(() => {});
+  st.code = code; setInfo({ ...c, code });
+  return code;
+}
+
 async function joinCouple(code, myName) {
   const u = auth.currentUser; if (!u) throw new Error('로그인이 필요해요');
-  code = String(code || '').replace(/\D/g, '');
-  if (code.length !== 6) throw new Error('숫자 6자리를 입력해 주세요');
+  code = cleanCode(code);
+  if (code.length < 4 || code.length > 8) throw new Error('초대 코드(숫자 4~8자리)를 입력해 주세요');
   const inv = await fs.collection('invites').doc(code).get();
   if (!inv.exists) throw new Error('초대 코드를 찾을 수 없어요. 숫자를 다시 확인해 주세요');
   const cid = inv.data().cid;
@@ -210,7 +231,8 @@ async function disconnect() {
   await flush().catch(() => {});
   const c = info();
   // 상대가 아직 안 들어온 초대 코드는 함께 취소
-  if (c && c.role === 'a' && c.code && st.members < 2 && fs) await fs.collection('invites').doc(c.code).delete().catch(() => {});
+  const code = st.code || (c && c.code);
+  if (c && c.role === 'a' && code && st.members < 2 && fs) await fs.collection('invites').doc(code).delete().catch(() => {});
   if (st.unsub) st.unsub(); if (st.coupleUnsub) st.coupleUnsub();
   setInfo(null);
   if (auth) await auth.signOut().catch(() => {});
@@ -238,7 +260,8 @@ function start(h) {
 }
 
 window.nneowCloud = {
-  available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, joinCouple, disconnect,
+  available, start, push, flush, info, signInGoogle, signInAnon, signInEmail, createCouple, joinCouple, changeCode, disconnect,
+  get code() { const c = info(); return st.code || (c && c.code) || ''; },
   get email() { return (auth && auth.currentUser && auth.currentUser.email) || ''; },
   get status() { return st.status; },
   get user() { return st.user; },

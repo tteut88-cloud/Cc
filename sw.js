@@ -1,5 +1,5 @@
 // 오프라인에서도 앱 화면이 열리도록 기본 파일을 캐시합니다.
-const CACHE = 'nneow-v8';
+const CACHE = 'nneow-v9';
 const SHELL = [
   './',
   './index.html',
