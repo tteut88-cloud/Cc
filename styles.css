@@ -456,3 +456,134 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .ph-list { display: flex; flex-direction: column; gap: 12px; }
 .ph-fig { margin: 0; }
 .ph-fig figcaption { font-size: .8em; color: var(--muted); margin-top: 6px; }
+
+/* ===== v6: LIST 일정 · 비 박스 · 메모 바 · 스티커 · 갤러리 · 메모 나누기 ===== */
+.todo-when { font-size: .78em; color: var(--muted); white-space: nowrap; }
+.empty br + * { display: block; }
+
+/* 비 올 확률 70% 이상: 아주 연한 파란 네모 (오늘 표시보다 옅게) */
+.rainbox { position: absolute; width: 36px; height: 30px; border-radius: 9px; background: rgba(61, 123, 224, .09); z-index: -2; }
+:root[data-theme="dark"] .rainbox { background: rgba(106, 160, 255, .12); }
+.cell.today .num-wrap::before { z-index: -1; }
+.sticker, .rainline { display: none; }
+.num.memo::after { display: none; }
+
+/* 메모 = 메모 색 바 (일정 막대와 같은 가로 길이) */
+.memo-bar { position: absolute; left: 3px; right: 3px; top: 41px; height: 4px; border-radius: 2px; background: var(--c); }
+.cell.pmode .memo-bar { top: 31px; }
+.cell.pmode .cell-photo-wrap { margin-top: 9px; }
+.cell-photo-n { position: absolute; right: 3px; bottom: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: rgba(0,0,0,.55); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+
+/* 스티커 */
+.stk { width: 100%; height: 100%; display: block; }
+.cell-stk { position: absolute; left: 50%; bottom: 8px; width: 28px; height: 28px; transform: translateX(-50%) rotate(-8deg); filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.18)); pointer-events: none; }
+.cell-stk.on-photo { left: auto; right: 0; bottom: 2px; width: 22px; height: 22px; transform: rotate(10deg); }
+.cell.blocked { opacity: .3; }
+.cell.placeable { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.place-hint { display: flex; align-items: center; gap: 8px; margin: -6px auto 6px; padding: 5px 6px 5px 10px; border-radius: 99px; background: var(--soft); font-size: .8em; font-weight: 700; }
+.place-hint .stk { width: 20px; height: 20px; }
+.place-hint button { padding: 4px 10px; border-radius: 99px; background: var(--fg); color: var(--bg); font-size: .9em; }
+.stk-grid .stk { width: 46px; height: 46px; }
+.stk-chip .stk { width: 18px; height: 18px; display: inline-block; vertical-align: -4px; }
+.stk-chip { --c: var(--muted); }
+.stk-big { width: 72px; height: 72px; margin: 0 auto 8px; }
+
+/* 상대 캘린더 보기: 스마일 대신 고양이 */
+.smile-btn .cat { width: 30px; height: 30px; object-fit: contain; }
+:root[data-theme="dark"] .smile-btn .cat { filter: invert(1); }
+
+/* ③ 날짜 줄: 연한 붉은 원 */
+.sday { border: 0 !important; border-radius: 0; background: none !important; gap: 4px; }
+.sday .d { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; transition: .15s; }
+.sday.sel .d, .sday.pending .d { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); font-weight: 800; }
+.sday.inred::after, .sday.inred-unused::after { display: none; }
+.day-wx { display: none; }
+.ev .mini.dot { border-radius: 50%; width: 7px; height: 7px; }
+
+/* ⑨ 상대 진행률 */
+.progress-card { margin: 12px 14px 0; padding: 14px 16px; border-radius: var(--radius); background: var(--soft); flex-shrink: 0; }
+.pc-top { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: .9em; }
+.pc-top b { font-size: 1.6em; color: var(--accent); }
+.pc-bar { height: 8px; border-radius: 4px; background: var(--line-strong); margin: 8px 0 6px; overflow: hidden; }
+.pc-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .4s; }
+.pc-sub { font-size: .78em; color: var(--muted); }
+
+/* ④ 메모 탭 */
+.memo-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.memo-tabs button { padding: 13px 0; font-weight: 700; font-size: .92em; color: var(--muted); border-bottom: 2.5px solid transparent; }
+.memo-tabs button.on { color: var(--fg); border-bottom-color: var(--fg); }
+.poke-btn { font-size: .8em; font-weight: 800; padding: 7px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; justify-self: end; margin-right: 4px; }
+.topbar { grid-template-columns: 76px 1fr 76px; }
+.topbar .icon-btn { justify-self: center; }
+.memo-tools { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; flex-shrink: 0; }
+.chkline { display: flex; align-items: center; gap: 8px; font-size: .88em; font-weight: 600; }
+.chkline .chk { width: 22px; height: 22px; border-radius: 6px; }
+.chkline .chk .ico { width: 15px; height: 15px; }
+.viewtog { display: flex; background: var(--soft); border-radius: 10px; padding: 3px; }
+.viewtog button { width: 36px; height: 30px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
+.viewtog button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.viewtog .ico { width: 18px; height: 18px; }
+.memo-list { padding: 0 14px; display: flex; flex-direction: column; gap: 8px; }
+.ml-item { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 12px 12px 0; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.ml-bar { width: 4px; align-self: stretch; background: var(--c); border-radius: 0 3px 3px 0; flex-shrink: 0; }
+.ml-body { flex: 1; min-width: 0; }
+.ml-text { font-weight: 600; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ml-sub { font-size: .75em; color: var(--muted); margin-top: 4px; }
+.ml-img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.memo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 14px; }
+.mg-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--c) 18%, var(--bg)); text-align: left; }
+.mg-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mg-text { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; padding: 10px; font-size: .8em; font-weight: 600; line-height: 1.35; color: color-mix(in srgb, var(--c) 55%, var(--fg)); white-space: pre-wrap; word-break: break-word; }
+.mg-who { position: absolute; right: 6px; bottom: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+.fab { position: absolute; right: 18px; bottom: calc(22px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; box-shadow: var(--shadow); z-index: 5; }
+
+/* ④ 메모 나누기: 메모장 디자인 */
+.pad { --paper: #fffdf6; --rule: #efe8d6; background: var(--paper) repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px); padding: 8px 18px 20px; overflow-x: hidden; }
+:root[data-theme="dark"] .pad { --paper: #1c1b18; --rule: #2c2a24; }
+.pad-date { text-align: center; font-size: .72em; color: var(--muted); margin: 14px 0 4px; letter-spacing: .05em; }
+.pad-row { position: relative; padding: 8px 0 10px; border-bottom: 1px dashed var(--rule); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.pad-row.me { text-align: right; }
+.pad-meta { font-size: .7em; color: var(--muted); margin-bottom: 3px; }
+.pad-text { white-space: pre-wrap; word-break: break-word; line-height: 1.55; }
+.pad-row.you .pad-text { font-size: calc(1em + 1.5px); font-weight: 600; }
+.pad-row.me .pad-text { font-size: .9em; color: color-mix(in srgb, var(--fg) 80%, transparent); }
+.pad-img { display: block; max-width: 70%; border-radius: 10px; margin: 4px 0 6px; }
+.pad-row.me .pad-img { margin-left: auto; }
+.pad-row .kk-quote { display: inline-flex; text-align: left; border-bottom: 0; border-left: 3px solid var(--line-strong); padding: 2px 0 2px 8px; margin-bottom: 4px; }
+.pad-row .kk-quote span { color: var(--muted); }
+.pad-row.arm .kk-reply-ico { opacity: 1; transform: translateY(-50%) scale(1); }
+.pad-bottom { flex-shrink: 0; background: var(--bg); }
+.pad-attach { position: relative; width: 72px; margin: 8px 0 0 14px; }
+.pad-attach img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; display: block; }
+.pad-attach button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; }
+.pad-attach .ico { width: 13px; height: 13px; stroke-width: 2.6; }
+
+/* 콕 찌르기 */
+.poke-hand { font-size: 52px; text-align: center; line-height: 1; margin-bottom: 8px; }
+.poke-hand.shake { animation: poke 0.9s ease-in-out 2; }
+@keyframes poke { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(14px); } 50% { transform: translateX(-4px); } 70% { transform: translateX(10px); } }
+.poke-msg { text-align: center; font-size: 1.15em; font-weight: 700; padding: 14px; margin: 10px 0 4px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); white-space: pre-wrap; word-break: break-word; }
+
+/* 상대가 남긴 일정 메모 */
+.detail-memo.note { position: relative; padding-left: 30px; }
+.note-mark { position: absolute; left: 12px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--fg); }
+.note-mark.sq { border-radius: 1.5px; }
+
+/* 갤러리 */
+.g-filter { display: flex; gap: 6px; align-items: center; padding: 10px 14px; flex-shrink: 0; }
+.g-filter button { padding: 6px 12px; border-radius: 99px; background: var(--soft); font-size: .82em; font-weight: 700; color: var(--muted); }
+.g-filter button.on { background: var(--fg); color: var(--bg); }
+.g-count { margin-left: auto; font-size: .78em; color: var(--muted); }
+.g-head { padding: 14px 14px 8px; font-weight: 800; font-size: .9em; }
+.g-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.g-item { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--soft); }
+.g-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.g-who { position: absolute; left: 5px; bottom: 5px; width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 800; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.5); }
+.g-who.you { background: var(--accent); }
+.g-cap { position: absolute; right: 6px; bottom: 6px; width: 8px; height: 8px; border-radius: 2px; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.35); }
+.sheet-grid { border-radius: 12px; overflow: hidden; margin-bottom: 4px; }
+.ph-preview { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+.ph-preview img { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
+.ph-preview img:only-child { width: 100%; height: auto; aspect-ratio: 1; }
+.ph-info { margin: 12px 0 6px; }
+.ph-info .kv b { width: 64px; }

@@ -51,6 +51,10 @@ const ICON = {
   download: I('<path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/>'),
   upload: I('<path d="M12 16V5M7 9.5l5-5 5 5M5 19.5h14"/>'),
   google: I('<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
+  bars: I('<path d="M7 5v14M12 5v14M17 5v14"/>'),
+  grid: I('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
+  list: I('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/>'),
+  share: I('<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/>'),
   users: I('<rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/>'),
 };
 
@@ -71,6 +75,12 @@ const FACES = {
   sick: { label: '아픔', d: '<path d="M12.5 14.5l4 4M16.5 14.5l-4 4M23.5 14.5l4 4M27.5 14.5l-4 4"/><path d="M14 27.5q3-2.5 6 0t6 0"/>' },
   worried: { label: '걱정', d: '<path d="M11.5 13.5l5-1.8M28.5 13.5l-5-1.8"/><circle cx="14.5" cy="18" r="2" fill="currentColor" stroke="none"/><circle cx="25.5" cy="18" r="2" fill="currentColor" stroke="none"/><path d="M15 27.5q2.5-2 5 0t5 0"/>' },
 };
+/* 스티커 — 상대 캘린더에 붙일 수 있음 */
+const STICKERS = {
+  heart: { label: '하트', svg: '<svg class="stk" viewBox="0 0 24 24"><path d="M12 21s-8.2-5-8.2-11.2A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.2 2.8C20.2 16 12 21 12 21z" fill="#ff7aa8" stroke="#ec5c8f" stroke-width="1.2" stroke-linejoin="round"/><ellipse cx="8.3" cy="9.6" rx="1.7" ry="1.1" fill="#fff" opacity=".75" transform="rotate(-30 8.3 9.6)"/></svg>' },
+  star: { label: '별', svg: '<svg class="stk" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9z" fill="#ffd23f" stroke="#e7b500" stroke-width="1.2" stroke-linejoin="round"/><circle cx="9.6" cy="10" r="1" fill="#fff" opacity=".8"/></svg>' },
+  clover: { label: '네잎클로버', svg: '<svg class="stk" viewBox="0 0 24 24"><g fill="#55c271" stroke="#2f9a4d" stroke-width="1" stroke-linejoin="round"><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(0 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(90 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(180 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(270 12 12)"/></g><circle cx="12" cy="12" r="1.3" fill="#2f9a4d"/></svg>' },
+};
 const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/>${(FACES[k] || FACES.smile).d}</svg>`;
 
 /* ================= 저장소 ================= */
@@ -88,15 +98,15 @@ function seed() {
     v: 1,
     users: {
       a: { name: '나', colors: { ...DEFAULT_COLORS }, font: 'wanted', theme: 'light', fs: 1 },
-      b: { name: '상대', colors: { schedule: '#e0707c', plan: '#f5a94a', memo: '#6dbb6d', shared: '#ff8fb1' }, font: 'wanted', theme: 'pink', fs: 1 },
+      b: { name: '상대', colors: { schedule: '#e0707c', plan: '#f5a94a', memo: '#6dbb6d', shared: '#ff8fb1' }, font: 'wanted', theme: 'pink', fs: 1, allowAccess: true },
     },
     events: [
       ev({ owner: 'a', title: '여행', start: D(9), end: D(11), allDay: true, shared: true, memo: '짐 미리 싸두기!', createdAt: now - 60 * HOUR }),
       ev({ owner: 'a', title: '회의', start: D(9), end: D(9), startTime: '10:00', endTime: '11:00' }),
-      ev({ owner: 'a', title: '아침 운동', start: today, end: today, startTime: '07:00', endTime: '08:00', type: 'plan' }),
+      ev({ owner: 'a', title: '아침 운동', start: today, end: today, startTime: '07:00', endTime: '08:00', type: 'plan', doneBy: { a: true } }),
       ev({ owner: 'a', title: '팀 회의', start: today, end: today, startTime: '14:00', endTime: '15:00', memo: '발표 자료 확인' }),
       ev({ owner: 'a', title: '저녁 약속', start: today, end: today, startTime: '19:00', endTime: '21:00', shared: true, createdAt: now - 3 * HOUR }),
-      ev({ owner: 'b', title: '병원 방문', start: today, end: today, startTime: '11:00', endTime: '12:00' }),
+      ev({ owner: 'b', title: '병원 방문', start: today, end: today, startTime: '11:00', endTime: '12:00', doneBy: { b: true } }),
       ev({ owner: 'b', title: '회의', start: today, end: today, startTime: '10:00', endTime: '11:00', type: 'plan' }),
       ev({ owner: 'b', title: '기념일', start: D(23), end: D(23), allDay: true, shared: true, createdAt: now - 26 * HOUR }),
       ev({ owner: 'a', title: '보고서 제출', start: D(17), end: D(17), allDay: true, deadline: true }),
@@ -118,6 +128,7 @@ function seed() {
     moods: {},
     moodLog: [],
     photos: { a: {}, b: {} },
+    gallery: [], stickers: [], pokes: [],
     notifs: [],
   };
 }
@@ -126,10 +137,11 @@ function emptyDb() {
   return {
     v: 1,
     users: {
-      a: { name: '나', colors: { ...DEFAULT_COLORS }, font: 'wanted', theme: 'light', fs: 1 },
-      b: { name: '상대', colors: { ...DEFAULT_COLORS, shared: '#ff8fb1' }, font: 'wanted', theme: 'light', fs: 1 },
+      a: { name: '나', colors: { ...DEFAULT_COLORS }, font: 'wanted', theme: 'light', fs: 1, allowAccess: false },
+      b: { name: '상대', colors: { ...DEFAULT_COLORS, shared: '#ff8fb1' }, font: 'wanted', theme: 'light', fs: 1, allowAccess: false },
     },
     events: [], deadlines: [], memos: [], todos: [], moods: {}, moodLog: [], photos: { a: {}, b: {} }, notifs: [],
+    gallery: [], stickers: [], pokes: [],
   };
 }
 function ensureShape(d) {
@@ -137,6 +149,12 @@ function ensureShape(d) {
   Object.keys(e).forEach((k) => { if (d[k] == null) d[k] = e[k]; });
   d.photos.a = d.photos.a || {}; d.photos.b = d.photos.b || {};
   ['a', 'b'].forEach((r) => { d.users[r] = { ...e.users[r], ...(d.users[r] || {}) }; d.users[r].colors = { ...e.users[r].colors, ...(d.users[r].colors || {}) }; });
+  // 예전 '날짜별 사진'을 공유 갤러리로 옮김 (id가 같아서 두 기기에서 옮겨도 중복되지 않음)
+  ['a', 'b'].forEach((r) => Object.entries(d.photos[r]).forEach(([date, o]) => {
+    const id = `ph_${r}_${date}`;
+    if (o && o.img && !d.gallery.some((g) => g.id === id)) d.gallery.push({ id, owner: r, date, img: o.img, src: o.src || '', caption: '', at: o.at || Date.now() });
+  }));
+  d.photos = { a: {}, b: {} };
   return d;
 }
 function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
@@ -170,6 +188,12 @@ const S = {
   memoSend: true,
   sessionFace: 'smile',
   flashFace: null,
+  memoTab: 'all',
+  memoPrivate: false,
+  memoView: 'list',
+  memoImg: '',
+  placing: null,
+  galFilter: 'all',
 };
 
 /* ================= 날씨 (GPS + Open-Meteo) ================= */
@@ -181,6 +205,7 @@ const isWet = (c) => isRain(c) || isSnow(c);
 const wxIcon = (c) => c == null ? ICON.cloud : isSnow(c) ? ICON.snow : isRain(c) ? ICON.rain : c <= 1 ? ICON.sun : ICON.cloud;
 const wxText = (c) => c == null ? '' : isSnow(c) ? '눈' : isRain(c) ? '비' : c <= 1 ? '맑음' : c <= 3 ? '구름' : c <= 48 ? '흐림' : '흐림';
 const dayWx = (s) => wx && wx.daily && wx.daily[s];
+const rainLikely = (s) => { const d = dayWx(s); return !!(d && d.prob != null && d.prob >= 70); }; // 비 올 확률 70% 이상
 
 function getPos() {
   return new Promise((res) => {
@@ -189,16 +214,16 @@ function getPos() {
   });
 }
 async function loadWeather(force = false) {
-  if (!force && wx && Date.now() - wx.at < 30 * 60e3) return;
+  if (!force && wx && wx.v === 2 && Date.now() - wx.at < 30 * 60e3) return;
   const pos = await getPos();
   const lat = pos ? pos.latitude : 37.5665; const lon = pos ? pos.longitude : 126.978; // 위치 권한이 없으면 서울
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&past_days=62&forecast_days=16&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&past_days=62&forecast_days=16&timezone=auto`;
     const r = await fetch(url); if (!r.ok) throw new Error('weather');
     const j = await r.json();
     const daily = {};
-    j.daily.time.forEach((t, i) => { daily[t] = { code: j.daily.weather_code[i], max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]) }; });
-    wx = { at: Date.now(), gps: !!pos, current: { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code }, daily };
+    j.daily.time.forEach((t, i) => { daily[t] = { code: j.daily.weather_code[i], max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]), prob: (j.daily.precipitation_probability_max || [])[i] }; });
+    wx = { v: 2, at: Date.now(), gps: !!pos, current: { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code }, daily };
     localStorage.setItem(WX_KEY, JSON.stringify(wx));
     render();
   } catch { /* 오프라인이면 캐시 유지 */ }
@@ -207,6 +232,7 @@ async function loadWeather(force = false) {
 /* ================= 데이터 조회 ================= */
 const colorOf = (ev) => db.users[ev.owner].colors[ev.shared ? 'shared' : (ev.type || 'schedule')];
 const covers = (ev, s) => ev.start <= s && ev.end >= s;
+const isTimed = (e) => !e.allDay && e.start === e.end && e.startTime;
 /* 내 캘린더: 내 일정 + 상대가 공유한 일정 / 상대 캘린더(⑤): 상대 일정 + 내가 공유한 일정 */
 function visibleEvents(owner = S.viewPartner ? YOU : ME) {
   const other = owner === ME ? YOU : ME;
@@ -217,8 +243,18 @@ function visibleDeadlines(owner = S.viewPartner ? YOU : ME) {
 }
 const myMemos = () => db.memos.filter((m) => !m.chat && (m.owner === ME || m.toPartner));
 const memosOn = (s) => myMemos().filter((m) => m.date === s);
-const CHAT_TYPES = ['memo', 'event', 'mood'];
-const unreadCount = () => db.notifs.filter((n) => n.to === ME && CHAT_TYPES.includes(n.type) && !n.read).length;
+const unreadMemos = () => db.notifs.filter((n) => n.to === ME && n.type === 'memo' && !n.read).length;
+/* ① LIST = 오늘 일정 (내 일정 + 상대가 공유한 일정). 완료 체크는 사람마다 따로 */
+const isDone = (e, who) => !!(e.doneBy && e.doneBy[who]);
+function listToday(who) {
+  const t = todayStr();
+  return visibleEvents(who).filter((e) => covers(e, t))
+    .sort((a, b) => (isTimed(a) ? 1 : 0) - (isTimed(b) ? 1 : 0) || (a.startTime || '').localeCompare(b.startTime || ''));
+}
+function progressOf(who) { const l = listToday(who); const done = l.filter((e) => isDone(e, who)).length; return { total: l.length, done, pct: l.length ? Math.round(done / l.length * 100) : 0 }; }
+const photosOn = (s) => db.gallery.filter((g) => g.date === s).sort((a, b) => b.at - a.at);
+const stickerOn = (owner, s) => db.stickers.filter((x) => x.to === owner && x.date === s).sort((a, b) => b.at - a.at)[0];
+const hasEventOn = (owner, s) => visibleEvents(owner).some((e) => covers(e, s));
 
 function notify(type, text, extra = {}) {
   db.notifs.push({ id: uid(), to: YOU, from: ME, type, text, at: Date.now(), read: false, ...extra });
@@ -282,7 +318,7 @@ function applyRemote(next, persist) {
   const pm = db.moods[YOU]; // 상대가 바꾼 표정을 아직 못 봤다면 (1시간 이내) 지금 보여줌
   if (pm && !pm.seenAt && Date.now() - pm.at < HOUR && S.sessionFaceAt !== pm.at) { S.sessionFaceAt = null; refreshSessionFace(false); bumpSmile = true; }
   applyPrefs();
-  if (!$('.overlay')) render(false, true); else renderQuiet = true;
+  if (!$('.overlay')) { render(false, true); showPokes(); } else renderQuiet = true;
 }
 window.addEventListener('storage', (e) => {
   if (e.key !== KEY || !e.newValue) return;
@@ -357,7 +393,7 @@ const after = {};
 /* ---------- ① LIST ---------- */
 SCREENS.list = () => {
   const t = todayStr();
-  const todos = db.todos.filter((x) => x.date === t && (x.owner === ME || x.shared));
+  const items = listToday(ME);
   const cur = wx && wx.current; const wet = cur && isWet(cur.code);
   return `
   <section class="screen list-screen">
@@ -369,19 +405,14 @@ SCREENS.list = () => {
     </div>
     <div class="scroll">
       <ul class="todo-list">
-        ${todos.length ? todos.map((x) => `
-          <li class="todo ${x.done ? 'done' : ''}">
-            <button class="chk ${x.done ? 'on' : ''}" data-act="toggleTodo" data-id="${x.id}" aria-label="완료">${x.done ? ICON.check : ''}</button>
-            <span class="txt">${esc(x.text)}</span>
-            ${x.shared ? `<span class="tag">함께${x.owner !== ME ? ' · ' + esc(you().name) : ''}</span>` : ''}
-            <button class="del" data-act="delTodo" data-id="${x.id}" aria-label="삭제">${ICON.x}</button>
-          </li>`).join('') : '<li class="empty">오늘 할 일을 적어보세요</li>'}
+        ${items.length ? items.map((e) => { const done = isDone(e, ME); return `
+          <li class="todo ${done ? 'done' : ''}">
+            <button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>
+            <span class="txt">${esc(e.title)}</span>
+            <span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}</span>
+            ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
+          </li>`; }).join('') : '<li class="empty">오늘은 일정이 없어요<br/>달력에서 일정을 추가하면 여기에 떠요</li>'}
       </ul>
-      <form class="add-row" data-form="addTodo">
-        <input name="text" placeholder="할 일 추가" autocomplete="off" />
-        <button type="button" class="pill-toggle ${S.todoShared ? 'on' : ''}" data-act="todoShare">함께</button>
-        <button class="btn" type="submit">추가</button>
-      </form>
       <div class="list-hint">LIST를 누르면 달력으로 넘어가요</div>
     </div>
   </section>`;
@@ -404,21 +435,24 @@ SCREENS.month = () => {
     for (let i = 0; i < 7; i++) {
       const s = addDays(ws, i); const d = parse(s);
       const out = d.getMonth() !== m;
-      const memo = memosOn(s).length > 0;
-      const dw = dayWx(s); const rain = dw && isRain(dw.code); const snow = dw && isSnow(dw.code);
+      const dm = memosOn(s);
+      const memoCol = dm.length ? db.users[(dm.find((x) => x.owner === ME) || dm[0]).owner].colors.memo : '';
+      const rainy = !out && rainLikely(s);
       const dlEnd = evs.some((x) => x.deadline && x.end === s);
       // 갤러리: 두 사람의 사진을 함께 보여줌 (보고 있는 캘린더 주인의 사진이 크게, 다른 사람 사진은 작게)
       const other = owner === ME ? YOU : ME;
-      const photo = S.photoMode && !out && (db.photos[owner][s] || db.photos[other][s]);
-      const subPhoto = photo && db.photos[owner][s] && db.photos[other][s];
+      const phs = S.photoMode && !out ? photosOn(s) : [];
+      const photo = phs.find((g) => g.owner === owner) || phs[0];
+      const subPhoto = photo && photo.owner === owner && phs.find((g) => g.owner === other);
+      const stk = !out && stickerOn(owner, s);
+      const blocked = S.placing && !out && hasEventOn(YOU, s);
       cells += `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${s === t ? 'today' : ''} ${S.rangeStart === s ? 'range-start' : ''} ${S.photoMode ? 'pmode' : ''}"
+        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${s === t ? 'today' : ''} ${S.rangeStart === s ? 'range-start' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
-          <div class="num-wrap">
-            ${!out && (rain || snow) ? `<span class="sticker ${snow ? 'snow' : ''}"></span>` : ''}
-            <span class="num ${memo && !out ? 'memo' : ''}">${d.getDate()}</span>${!out && rain ? '<span class="rainline"></span>' : ''}
-          </div>
-          ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" />${subPhoto ? `<img class="cell-photo-sub" src="${subPhoto.img}" alt="" />` : ''}</div>` : ''}
+          <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
+          ${memoCol && !out ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
+          ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" />${subPhoto ? `<img class="cell-photo-sub" src="${subPhoto.img}" alt="" />` : ''}${phs.length > 1 && !subPhoto ? `<span class="cell-photo-n">${phs.length}</span>` : ''}</div>` : ''}
+          ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${!out && dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
     }
@@ -441,31 +475,30 @@ SCREENS.month = () => {
         const vis1 = Math.min(c1, lastCol);
         if (vis1 < vis0) return;
         const contL = e.start < addDays(ws, vis0); const contR = e.end > addDays(ws, vis1);
-        bars += `<div class="bar ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${44 + lane * 21}px">${esc(e.title)}</div>`;
+        bars += `<div class="bar ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${47 + lane * 21}px">${esc(e.title)}</div>`;
       });
-      Object.entries(extra).forEach(([c, n]) => { bars += `<div class="bar more" style="left:calc(${c} * 100% / 7);width:calc(100% / 7);top:${44 + 3 * 21}px">+${n}</div>`; });
+      Object.entries(extra).forEach(([c, n]) => { bars += `<div class="bar more" style="left:calc(${c} * 100% / 7);width:calc(100% / 7);top:${47 + 3 * 21}px">+${n}</div>`; });
     }
     html += `<div class="week">${cells}<div class="bars">${bars}</div></div>`;
   }
   const curFace = S.flashFace || S.sessionFace;
-  const unread = unreadCount();
+  const unread = unreadMemos();
   return `
   <section class="screen">
     <header class="month-head">
-      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${face(curFace)}</button>
+      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? '<img class="cat" src="assets/icons/logo.png" alt="" />' : face(curFace)}</button>
       <button class="icon-btn" data-act="prevMonth" aria-label="이전 달">${ICON.left}</button>
       <button class="month-title" data-act="pickMonth">${y}년 ${m + 1}월</button>
       <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button>
       <button class="icon-btn" data-act="toSearch" aria-label="검색">${ICON.search}</button>
     </header>
-    ${S.viewPartner ? `<div class="partner-banner">${esc(db.users[owner].name)}의 캘린더</div>` : ''}
-    ${S.photoMode ? `<div class="photo-banner">갤러리 · 날짜를 눌러 사진을 넣어보세요</div>` : ''}
+    ${S.placing ? `<div class="place-hint">${STICKERS[S.placing].svg}<span>붙일 날짜를 눌러주세요</span><button data-act="cancelPlace">취소</button></div>` : ''}
     <div class="weekdays">${WD.map((d, i) => `<span class="${i === 0 ? 'sun' : ''}">${d}</span>`).join('')}</div>
     <div class="grid" id="grid">${html}</div>
     <nav class="bottombar">
-      <button data-act="toMemo" aria-label="메모">${ICON.square}</button>
-      <button data-act="togglePartner" class="${S.viewPartner ? 'on' : ''}" aria-label="상대 캘린더 전환">${ICON.plus}</button>
-      <button data-act="toInbox" aria-label="기록">${ICON.menu}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
+      <button data-act="toMemo" aria-label="메모">${ICON.square}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
+      <button data-act="togglePartner" data-lp="plus" class="${S.viewPartner ? 'on' : ''}" aria-label="상대 캘린더 전환">${ICON.plus}</button>
+      <button data-act="toGallery" data-lp="bars" aria-label="갤러리">${ICON.bars}</button>
       <button data-act="toSettings" aria-label="설정">${ICON.circle}</button>
     </nav>
   </section>`;
@@ -493,17 +526,12 @@ function stripHTML() {
   let s = '';
   for (let i = -7; i <= 30; i++) {
     const d = addDays(S.sel, i); const dt = parse(d);
-    const dw = dayWx(d); const redEnd = dls.some((x) => x.to === d);
+    const redEnd = dls.some((x) => x.to === d);
     s += `<button class="sday ${dt.getDay() === 0 ? 'sun' : ''} ${d === S.sel ? 'sel' : ''} ${redEnd ? 'redend' : ''}" data-act="selDay" data-lp="strip" data-date="${d}" id="sd-${d}">
-      <span class="w">${WD[dt.getDay()]}</span><span class="d">${dt.getDate()}</span>${dw && isWet(dw.code) ? '<span class="dot"></span>' : ''}
+      <span class="w">${WD[dt.getDay()]}</span><span class="d">${dt.getDate()}</span>
     </button>`;
   }
   return `<div class="strip" id="strip">${s}</div>`;
-}
-function wxLine(s) {
-  const dw = dayWx(s);
-  if (!dw) return `<div class="day-wx">${ICON.cloud} 날씨 정보 없음</div>`;
-  return `<div class="day-wx ${isWet(dw.code) ? 'wet' : ''}">${wxIcon(dw.code)} ${wxText(dw.code)} ${dw.max}° / ${dw.min}°</div>`;
 }
 /* 겹치는 일정을 나란히 배치 */
 function layoutTimed(list) {
@@ -522,26 +550,27 @@ function layoutTimed(list) {
 function evBlocks(list) {
   return layoutTimed(list).map((g) => {
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
-    return `<button class="ev" data-act="openEvent" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
-      ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}
+    const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
+    return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
+      ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
       <small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>
     </button>`;
   }).join('');
 }
-const isTimed = (e) => !e.allDay && e.start === e.end && e.startTime;
 SCREENS.day = () => {
   const evs = visibleEvents().filter((e) => covers(e, S.sel));
   const allday = evs.filter((e) => !isTimed(e));
   const timed = evs.filter(isTimed);
   const dls = visibleDeadlines().filter((d) => d.from <= S.sel && d.to >= S.sel);
+  const stkDay = stickerOn(S.viewPartner ? YOU : ME, S.sel);
   let hours = '';
   for (let h = 0; h < 24; h++) hours += `<div class="hour"><div class="lbl">${hourLabel(h)}</div><div class="slot" data-act="slot" data-hour="${h}"></div></div>`;
   return `
   <section class="screen">
     ${topbar(fmtDate(S.sel), `<button class="icon-btn" data-act="newEvent" aria-label="일정 추가">${ICON.plus}</button>`)}
     ${stripHTML()}
-    ${wxLine(S.sel)}
-    ${allday.length || dls.length ? `<div class="allday">
+    ${allday.length || dls.length || stkDay ? `<div class="allday">
+      ${stkDay ? `<button class="chip stk-chip" data-act="openSticker" data-id="${stkDay.id}">${STICKERS[stkDay.kind] ? STICKERS[stkDay.kind].svg : ''} ${esc(db.users[stkDay.from].name)}의 스티커</button>` : ''}
       ${dls.map((d) => `<button class="chip red" data-act="openDeadline" data-id="${d.id}">레드라인 · ${esc(d.title)} ${d.to === S.sel ? '· 오늘까지' : `· ${diffDays(S.sel, d.to)}일 남음`}</button>`).join('')}
       ${allday.map((e) => `<button class="chip" style="--c:${colorOf(e)}" data-act="openEvent" data-id="${e.id}">${esc(e.title)}${e.start !== e.end ? ` (${parse(e.start).getDate()}–${parse(e.end).getDate()}일)` : ''}</button>`).join('')}
     </div>` : ''}
@@ -575,6 +604,10 @@ SCREENS.split = () => {
   return `
   <section class="screen">
     ${topbar('함께 보는 일정')}
+    ${(() => { const p = progressOf(YOU); return `<div class="progress-card">
+      <div class="pc-top"><span>${esc(you().name)}의 오늘 진행률</span><b>${p.pct}%</b></div>
+      <div class="pc-bar"><i style="width:${p.pct}%"></i></div>
+      <div class="pc-sub">${p.total ? `오늘 일정 ${p.total}개 중 ${p.done}개 완료` : '오늘 등록된 일정이 없어요'}</div></div>`; })()}
     <div class="day-nav">
       <button data-act="splitPrev">${ICON.left}</button><span>${fmtDate(S.sel)}</span><button data-act="splitNext">${ICON.right}</button>
     </div>
@@ -591,131 +624,81 @@ SCREENS.split = () => {
 };
 after.split = (fresh) => { if (fresh) $('#tl-scroll').scrollTop = 8.5 * ROW; };
 
-/* ---------- ④ 메모 ---------- */
-SCREENS.memo = () => {
-  const list = myMemos().slice().sort((a, b) => a.createdAt - b.createdAt);
-  let lastDay = '';
-  const items = list.map((x) => {
-    const mine = x.owner === ME;
-    const day = ymd(new Date(x.createdAt));
-    const sep = day !== lastDay ? `<div class="date-sep">${fmtDate(day)}</div>` : ''; lastDay = day;
-    const col = db.users[x.owner].colors.memo;
-    return `${sep}<div class="msg ${mine ? 'me' : 'you'}" data-lp="memo" data-id="${x.id}">
-      ${mine ? '' : `<div class="avatar">${esc(you().name.slice(0, 1))}</div>`}
-      <div class="bubble" style="--mc:${col}">
-        <span class="for">${fmtDate(x.date)} 메모 ${mine && !x.toPartner ? '· 나만 보기' : ''}</span>
-        ${x.image ? `<img src="${x.image}" alt="" />` : ''}${esc(x.text)}
-      </div>
-      <div class="meta">${mine && !x.toPartner ? '🔒' : ''}<span>${clockLabel(x.createdAt)}</span></div>
-    </div>`;
-  }).join('');
-  return `
-  <section class="screen">
-    ${topbar('메모', `<button class="icon-btn" data-act="composeMemo" aria-label="사진과 함께 쓰기">${ICON.more}</button>`)}
-    <div class="scroll" id="chat-scroll"><div class="chat">${items || '<div class="empty">아직 메모가 없어요.<br/>사진과 함께 메모를 남겨보세요.</div>'}</div></div>
-    <form class="composer" data-form="quickMemo">
-      <button type="button" class="icon-btn" data-act="composeMemo" aria-label="사진 첨부">${ICON.image}</button>
-      <input name="text" placeholder="메모를 입력하세요" autocomplete="off" />
-      <button type="button" class="pill-toggle ${S.memoSend ? 'on' : ''}" data-act="memoSendToggle" style="height:40px">${S.memoSend ? '상대에게' : '나만 보기'}</button>
-      <button class="icon-btn send" type="submit" aria-label="보내기">${ICON.send}</button>
-    </form>
-  </section>`;
-};
-after.memo = () => { const c = $('#chat-scroll'); c.scrollTop = c.scrollHeight; };
-
-/* ---------- ⑥ 기록: 카톡 대화창 (공유 일정 · 메모 · 표정) ---------- */
-function chatItems() {
-  const items = [];
-  db.memos.filter((m) => m.toPartner).forEach((m) => items.push({ kind: 'memo', id: m.id, owner: m.owner, at: m.createdAt, m }));
-  db.events.filter((e) => e.shared).forEach((e) => items.push({ kind: 'event', id: e.id, owner: e.owner, at: e.sharedAt || e.createdAt, e }));
-  db.moodLog.forEach((x) => items.push({ kind: 'mood', id: x.id, owner: x.owner, at: x.at, x }));
-  return items.sort((a, b) => a.at - b.at);
-}
-function refOf(r) {
-  if (!r) return null;
-  if (r.kind === 'memo') { const m = db.memos.find((x) => x.id === r.id); return m && { owner: m.owner, text: m.text || '사진' }; }
-  if (r.kind === 'event') { const e = db.events.find((x) => x.id === r.id); return e && { owner: e.owner, text: `일정 · ${e.title} (${fmtDate(e.start)})` }; }
-  if (r.kind === 'mood') { const x = db.moodLog.find((y) => y.id === r.id); return x && { owner: x.owner, text: `표정 · ${FACES[x.face]?.label || ''}` }; }
-  return null;
-}
+/* ---------- ④ 메모: 모아보기 / 나누기 ---------- */
 const whoName = (o) => (o === ME ? me().name : you().name);
 function quoteHTML(r) {
-  const q = refOf(r);
-  if (!q) return r ? '<div class="kk-quote"><span>삭제된 메시지</span></div>' : '';
-  return `<div class="kk-quote"><b>${esc(whoName(q.owner))}에게 답장</b><span>${esc(q.text)}</span></div>`;
+  if (!r) return '';
+  const m = r.kind === 'memo' && db.memos.find((x) => x.id === r.id);
+  if (!m) return '<div class="kk-quote"><span>삭제된 메모</span></div>';
+  return `<div class="kk-quote"><b>${esc(whoName(m.owner))}에게 답장</b><span>${esc(m.text || '사진')}</span></div>`;
 }
-function evWhen(e) {
-  if (e.start !== e.end) return `${fmtDate(e.start)} – ${fmtDate(e.end)}`;
-  return e.allDay || !e.startTime ? `${fmtDate(e.start)} · 하루 종일` : `${fmtDate(e.start)} · ${timeLabel(e.startTime)}`;
+function memoListItems() {
+  const list = S.memoPrivate
+    ? db.memos.filter((m) => m.owner === ME && !m.toPartner)
+    : db.memos.filter((m) => m.toPartner);
+  return list.slice().sort((a, b) => b.createdAt - a.createdAt);
 }
-function chatBubble(it) {
-  if (it.kind === 'memo') {
-    const m = it.m;
-    return `<div class="kk-bubble">${quoteHTML(m.replyTo)}${m.image ? `<img src="${m.image}" alt="" />` : ''}${m.text ? `<span>${esc(m.text)}</span>` : ''}</div>`;
-  }
-  if (it.kind === 'event') {
-    const e = it.e;
-    return `<button class="kk-bubble kk-card" data-act="openEvent" data-id="${e.id}" style="--c:${colorOf(e)}">
-      <span class="kk-card-h">함께하는 일정을 등록했어요</span>
-      <span class="kk-card-t">${esc(e.title)}</span>
-      <span class="kk-card-s">${evWhen(e)}</span></button>`;
-  }
-  const f = FACES[it.x.face] || FACES.smile;
-  return `<div class="kk-bubble kk-mood">${face(it.x.face)}<span>표정을 <b>${f.label}</b>(으)로 바꿨어요</span></div>`;
+function memoAllHTML() {
+  const list = memoListItems();
+  const tools = `<div class="memo-tools">
+    <button class="chkline" data-act="memoPrivate"><span class="chk ${S.memoPrivate ? 'on' : ''}">${S.memoPrivate ? ICON.check : ''}</span>나만 보는 메모</button>
+    <div class="viewtog"><button data-act="memoView" data-v="list" class="${S.memoView === 'list' ? 'on' : ''}" aria-label="목록">${ICON.list}</button><button data-act="memoView" data-v="grid" class="${S.memoView === 'grid' ? 'on' : ''}" aria-label="바둑판">${ICON.grid}</button></div>
+  </div>`;
+  const empty = `<div class="empty">${S.memoPrivate ? '나만 보는 메모가 없어요' : '나눈 메모가 없어요'}</div>`;
+  const body = !list.length ? empty : S.memoView === 'grid'
+    ? `<div class="memo-grid">${list.map((m) => `<button class="mg-item" style="--c:${db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+        ${m.image ? `<img src="${m.image}" alt="" />` : `<span class="mg-text">${esc(m.text)}</span>`}
+        <span class="mg-who">${esc(whoName(m.owner).slice(0, 1))}</span></button>`).join('')}</div>`
+    : `<div class="memo-list">${list.map((m) => `<button class="ml-item" style="--c:${db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+        <span class="ml-bar"></span>
+        <div class="ml-body"><div class="ml-text">${esc(m.text) || '사진'}</div>
+        <div class="ml-sub">${esc(whoName(m.owner))} · ${m.chat ? clockLabel(m.createdAt) : fmtDate(m.date) + ' 메모'} · ${ago(m.createdAt)}</div></div>
+        ${m.image ? `<img class="ml-img" src="${m.image}" alt="" />` : ''}</button>`).join('')}</div>`;
+  return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:90px"></div></div>
+    <button class="fab" data-act="composeMemo" aria-label="메모 쓰기">${ICON.plus}</button>`;
 }
-SCREENS.inbox = () => {
-  const list = chatItems();
-  let lastDay = '', prevOwner = null, html = '';
-  list.forEach((it, i) => {
-    const mine = it.owner === ME;
-    const d = new Date(it.at); const day = ymd(d);
-    if (day !== lastDay) { html += `<div class="kk-date">${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일</div>`; lastDay = day; prevOwner = null; }
-    const next = list[i + 1];
-    const showTime = !next || next.owner !== it.owner || clockLabel(next.at) !== clockLabel(it.at) || ymd(new Date(next.at)) !== day;
-    const first = prevOwner !== it.owner;
-    html += `<div class="kk-row ${mine ? 'me' : 'you'} ${first ? 'first' : ''}" data-kind="${it.kind}" data-id="${it.id}">
-      ${!mine ? (first ? `<div class="kk-av">${esc(you().name.slice(0, 1))}</div>` : '<div class="kk-av blank"></div>') : ''}
-      <div class="kk-col">
-        ${!mine && first ? `<div class="kk-name">${esc(you().name)}</div>` : ''}
-        <div class="kk-line">${chatBubble(it)}${showTime ? `<span class="kk-time">${clockLabel(it.at)}</span>` : ''}</div>
-      </div>
+function memoPadHTML() {
+  const list = db.memos.filter((m) => m.toPartner).slice().sort((a, b) => a.createdAt - b.createdAt);
+  let lastDay = '';
+  const rows = list.map((m) => {
+    const mine = m.owner === ME; const day = ymd(new Date(m.createdAt));
+    const sep = day !== lastDay ? `<div class="pad-date">${fmtDate(day)}</div>` : ''; lastDay = day;
+    return `${sep}<div class="pad-row ${mine ? 'me' : 'you'}" data-lp="memo" data-kind="memo" data-id="${m.id}">
+      <div class="pad-meta">${esc(whoName(m.owner))} · ${clockLabel(m.createdAt)}${m.chat ? '' : ` · ${fmtDate(m.date)} 메모`}</div>
+      ${quoteHTML(m.replyTo)}
+      ${m.image ? `<img class="pad-img" src="${m.image}" alt="" />` : ''}
+      ${m.text ? `<div class="pad-text">${esc(m.text)}</div>` : ''}
       <span class="kk-reply-ico">${ICON.reply}</span>
     </div>`;
-    prevOwner = it.owner;
-  });
-  const rq = refOf(S.replyTo);
-  return `
-  <section class="screen kk">
-    ${topbar(esc(you().name))}
-    <div class="scroll kk-scroll" id="kk-scroll">${html || '<div class="kk-empty">아직 주고받은 기록이 없어요</div>'}</div>
-    <div class="kk-bottom">
-      ${rq ? `<div class="kk-replybar"><div><b>${esc(whoName(rq.owner))}에게 답장</b><span>${esc(rq.text)}</span></div><button data-act="cancelReply" aria-label="답장 취소">${ICON.x}</button></div>` : ''}
-      <form class="composer kk-form" data-form="chatSend">
-        <button type="button" class="icon-btn" data-act="chatImage" aria-label="사진">${ICON.image}</button>
-        <input name="text" id="kk-input" placeholder="메시지를 입력하세요" autocomplete="off" />
+  }).join('');
+  const rm = S.replyTo && db.memos.find((x) => x.id === S.replyTo.id);
+  return `<div class="scroll pad" id="pad-scroll">${rows || '<div class="empty">메모를 주고받아 보세요</div>'}</div>
+    <div class="pad-bottom">
+      ${rm ? `<div class="kk-replybar"><div><b>${esc(whoName(rm.owner))}에게 답장</b><span>${esc(rm.text || '사진')}</span></div><button data-act="cancelReply" aria-label="답장 취소">${ICON.x}</button></div>` : ''}
+      ${S.memoImg ? `<div class="pad-attach"><img src="${S.memoImg}" alt="" /><button data-act="padImgRm" aria-label="사진 빼기">${ICON.x}</button></div>` : ''}
+      <form class="composer" data-form="padSend">
+        <button type="button" class="icon-btn" data-act="padImage" aria-label="사진 첨부">${ICON.image}</button>
+        <input name="text" id="pad-input" placeholder="메모를 남겨보세요" autocomplete="off" />
         <button class="icon-btn send" type="submit" aria-label="보내기">${ICON.send}</button>
       </form>
-      <input type="file" id="kk-file" accept="image/*" hidden />
-    </div>
+    </div>`;
+}
+SCREENS.memo = () => `
+  <section class="screen">
+    ${topbar('메모', S.memoTab === 'share' ? '<button class="poke-btn" data-act="poke">콕 찌르기</button>' : '')}
+    <div class="memo-tabs"><button data-act="memoTab" data-v="all" class="${S.memoTab === 'all' ? 'on' : ''}">메모 모아보기</button><button data-act="memoTab" data-v="share" class="${S.memoTab === 'share' ? 'on' : ''}">메모 나누기</button></div>
+    ${S.memoTab === 'share' ? memoPadHTML() : memoAllHTML()}
   </section>`;
-};
-after.inbox = () => {
-  const c = $('#kk-scroll'); c.scrollTop = c.scrollHeight;
-  let ch = false; db.notifs.forEach((n) => { if (n.to === ME && CHAT_TYPES.includes(n.type) && !n.read) { n.read = true; ch = true; } });
+after.memo = () => {
+  if (S.memoTab !== 'share') return;
+  const c = $('#pad-scroll'); c.scrollTop = c.scrollHeight;
+  let ch = false; db.notifs.forEach((n) => { if (n.to === ME && n.type === 'memo' && !n.read) { n.read = true; ch = true; } });
   if (ch) save();
-  if (S.replyTo) $('#kk-input').focus();
-  $('#kk-file').onchange = async (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    const img = await shrinkImage(f); const r = S.replyTo; S.replyTo = null;
-    addMemo('', img, todayStr(), true, r, true);
-  };
-  /* 메시지를 꾹 누른 채 왼쪽으로 밀면 답장 */
+  if (S.replyTo) $('#pad-input').focus();
+  /* 메모를 누른 채 왼쪽으로 밀면 답장 */
   let sw = null;
   const reset = (row) => { row.style.transition = 'transform .2s'; row.style.transform = ''; row.classList.remove('arm'); setTimeout(() => { row.style.transition = ''; }, 220); };
-  c.addEventListener('pointerdown', (e) => {
-    const row = e.target.closest('.kk-row'); if (!row) return;
-    sw = { row, x: e.clientX, y: e.clientY, dx: 0, active: false };
-  });
+  c.addEventListener('pointerdown', (e) => { const row = e.target.closest('.pad-row'); if (!row) return; sw = { row, x: e.clientX, y: e.clientY, dx: 0, active: false }; });
   c.addEventListener('pointermove', (e) => {
     if (!sw) return;
     const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
@@ -731,14 +714,49 @@ after.inbox = () => {
     if (!sw) return; const { row, dx, active } = sw; sw = null;
     if (!active) return;
     reset(row); swallowClick = true; setTimeout(() => { swallowClick = false; }, 300);
-    if (dx < -55) {
-      if (navigator.vibrate) navigator.vibrate(12);
-      S.replyTo = { kind: row.dataset.kind, id: row.dataset.id }; render();
-    }
+    if (dx < -55) { if (navigator.vibrate) navigator.vibrate(12); S.replyTo = { kind: 'memo', id: row.dataset.id }; render(false, true); }
   };
   c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end); c.addEventListener('pointerleave', end);
 };
 let swallowClick = false;
+
+/* 메모 크게 보기 */
+function memoDetail(m) {
+  const mine = m.owner === ME;
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m.chat ? '나눈 메모' : fmtDate(m.date) + ' 메모'}</h3>${mine ? '<button class="icon-btn" data-act="memoEditOpen">수정</button>' : '<span></span>'}</div>
+    ${m.image ? `<img class="photo-view" src="${m.image}" alt="" style="aspect-ratio:auto;margin-bottom:12px" />` : ''}
+    ${m.text ? `<div class="detail-memo">${esc(m.text)}</div>` : ''}
+    <div class="kv"><b>누가</b><span>${esc(whoName(m.owner))}${!m.toPartner ? ' · 나만 보기' : ''}</span></div>
+    <div class="kv"><b>언제</b><span>${fmtDate(ymd(new Date(m.createdAt)))} ${clockLabel(m.createdAt)}</span></div>
+    ${mine ? '<button class="btn danger block" data-act="memoDelete" style="margin-top:10px">삭제</button>' : ''}`);
+  actions.memoEditOpen = () => { closeSheet(); memoCompose({ memo: m }); };
+  actions.memoDelete = () => confirmSheet('이 메모를 삭제할까요?', '', '삭제', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(false, true); }, true);
+}
+/* 내 메모 꾹 → 수정 / 삭제 */
+function memoMenu(m) {
+  openSheet(`<div class="confirm-text">내 메모</div><div class="confirm-sub">${esc((m.text || '사진').slice(0, 40))}</div>
+    <div class="actions"><button class="btn ghost" data-act="memoEditOpen">수정</button><button class="btn danger" data-act="memoDelete">삭제</button></div>`, { center: true });
+  actions.memoEditOpen = () => { closeSheet(); memoCompose({ memo: m }); };
+  actions.memoDelete = () => { closeSheet(); db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(false, true); toast('삭제했어요'); };
+}
+
+/* ---------- 갤러리 (공유) ---------- */
+SCREENS.gallery = () => {
+  const all = db.gallery.slice().sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at);
+  const list = all.filter((g) => S.galFilter === 'all' || (S.galFilter === 'me' ? g.owner === ME : g.owner === YOU));
+  let lastM = '', html = '';
+  list.forEach((g) => {
+    const d = parse(g.date); const mk = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+    if (mk !== lastM) { html += `${lastM ? '</div>' : ''}<div class="g-head">${mk}</div><div class="g-grid">`; lastM = mk; }
+    html += `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" loading="lazy" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span>${g.caption ? '<span class="g-cap"></span>' : ''}</button>`;
+  });
+  if (lastM) html += '</div>';
+  return `<section class="screen">
+    ${topbar('갤러리', `<button class="icon-btn" data-act="addPhotos" aria-label="사진 올리기">${ICON.plus}</button>`)}
+    <div class="g-filter">${[['all', '모두'], ['me', '내 사진'], ['you', esc(you().name)]].map(([k, l]) => `<button data-act="galFilter" data-v="${k}" class="${S.galFilter === k ? 'on' : ''}">${l}</button>`).join('')}<span class="g-count">${list.length}장</span></div>
+    <div class="scroll">${html || `<div class="empty">아직 사진이 없어요<br/>＋를 눌러 사진을 올리거나, 휴대폰 갤러리에서 ‘공유 → nneow’로 보내보세요</div>`}<div style="height:24px"></div></div>
+  </section>`;
+};
 
 /* ---------- ⑦ 설정 ---------- */
 SCREENS.settings = () => `
@@ -753,6 +771,7 @@ SCREENS.settings = () => `
       </ul>
       <div class="menu-title">우리 둘</div>
       <ul class="menu">
+        <li><button data-act="toggleAccess">상대방 접근 허용<span class="val">${me().allowAccess ? '허용함' : '허용 안 함'}</span><span class="switch ${me().allowAccess ? 'on' : ''}"></span></button></li>
         <li><button data-act="toPair">상대 휴대폰과 연결<span class="val">${cloudLabel()}</span>${ICON.right}</button></li>
         <li><button data-act="toSync">다른 캘린더와 동기화${ICON.right}</button></li>
         <li><button data-act="editNames">이름<span class="val">${esc(me().name)} · ${esc(you().name)}</span>${ICON.right}</button></li>
@@ -760,6 +779,7 @@ SCREENS.settings = () => `
         <li><button data-act="refreshWx">날씨 새로고침<span class="val">${wx ? (wx.gps ? 'GPS 위치' : '서울 기준') : '-'}</span>${ICON.right}</button></li>
         ${CLOUD ? '' : `<li><button data-act="openPartnerTab">상대 화면 열기 (같은 기기 미리보기)${ICON.right}</button></li>`}
       </ul>
+      <p class="note">접근을 허용하면 ${esc(you().name)}가 내 일정에 메모를 남기고, 내 캘린더에 스티커를 붙일 수 있어요.<br/>${esc(you().name)}는 지금 접근을 ${you().allowAccess ? '<b>허용했어요</b>' : '허용하지 않았어요'}.</p>
       ${CLOUD ? '' : '<ul class="menu"><li><button data-act="resetAll" style="color:var(--red)">모든 데이터 초기화</button></li></ul>'}
       <p class="note">nneow · 지금 <b>${esc(me().name)}</b>(으)로 사용 중이에요. ${CLOUD ? '상대 휴대폰과 실시간으로 공유되고 있어요.' : '아직 상대 휴대폰과 연결되지 않아 이 기기 안에만 저장돼요. ‘상대 휴대폰과 연결’에서 연결해 주세요.'}</p>
     </div>
@@ -869,7 +889,7 @@ SCREENS.search = () => `
   <section class="screen" style="padding-top:0">
     <form class="search-bar" data-form="search" onsubmit="return false">
       <button type="button" class="icon-btn" data-act="back">${ICON.left}</button>
-      <input name="q" id="q" placeholder="일정, 메모, 할 일 검색" value="${esc(S.query)}" autocomplete="off" />
+      <input name="q" id="q" placeholder="일정, 메모, 사진 검색" value="${esc(S.query)}" autocomplete="off" />
     </form>
     <div class="scroll" id="results">${searchResults()}</div>
   </section>`;
@@ -884,14 +904,14 @@ function searchResults() {
   const evs = [...visibleEvents(ME), ...db.events.filter((e) => e.owner === YOU && !e.shared)]
     .filter((e) => has(e.title) || has(e.memo)).sort((a, b) => b.start.localeCompare(a.start));
   const memos = myMemos().filter((m) => has(m.text)).sort((a, b) => b.createdAt - a.createdAt);
-  const todos = db.todos.filter((t) => (t.owner === ME || t.shared) && has(t.text));
+  const pics = db.gallery.filter((g) => has(g.caption));
   const dls = visibleDeadlines(ME).filter((d) => has(d.title));
   const row = (c, t, s, date) => `<button class="result" data-act="gotoDay" data-date="${date}"><span class="dotc" style="--c:${c}"></span><div><div class="t">${t}</div><div class="s">${s}</div></div></button>`;
   const out = [
     ...evs.map((e) => row(colorOf(e), hl(e.title, q), `${fmtDate(e.start)}${e.end !== e.start ? ' – ' + fmtDate(e.end) : ''} · ${e.owner === ME ? '내 일정' : esc(you().name) + ' 일정'}`, e.start)),
     ...dls.map((d) => row('var(--red)', hl(d.title, q), `레드라인 · ${fmtDate(d.to)}까지`, d.to)),
     ...memos.map((m) => row(db.users[m.owner].colors.memo, hl(m.text, q), `메모 · ${fmtDate(m.date)}`, m.date)),
-    ...todos.map((t) => row('var(--muted)', hl(t.text, q), `할 일 · ${fmtDate(t.date)}`, t.date)),
+    ...pics.map((g) => row('var(--muted)', hl(g.caption, q), `사진 · ${fmtDate(g.date)}`, g.date)),
   ];
   return out.join('') || '<div class="empty">검색 결과가 없어요</div>';
 }
@@ -911,7 +931,8 @@ function openSheet(html, { center = false, bind } = {}) {
 function closeSheet() {
   root.innerHTML = ''; sheetBind = null;
   $$('.sday.pending').forEach((el) => el.classList.remove('pending'));
-  if (renderQuiet) { renderQuiet = false; render(); }
+  if (renderQuiet) { renderQuiet = false; render(false, true); }
+  setTimeout(showPokes, 0);
 }
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 function confirmSheet(text, sub, okLabel, onOk, danger) {
@@ -984,17 +1005,22 @@ function eventDetail(e) {
     <div class="lbl-sm" style="margin-top:14px">메모</div>
     ${e.memo ? `<div class="detail-memo">${esc(e.memo)}</div>` : ''}
     ${dayMemos.map((m) => `<div class="detail-memo">${m.image ? `<img src="${m.image}" alt="" />` : ''}${esc(m.text)}<div class="s" style="font-size:.75em;color:var(--muted);margin-top:4px">${m.owner === ME ? '나' : esc(you().name)} · ${clockLabel(m.createdAt)}</div></div>`).join('')}
-    ${!e.memo && !dayMemos.length ? '<div class="empty" style="padding:14px 0">이 날의 메모가 없어요</div>' : ''}
+    ${(e.notes || []).map((n) => `<div class="detail-memo note"><span class="note-mark ${n.by === e.owner ? 'sq' : ''}"></span>${esc(n.text)}<div class="s" style="font-size:.75em;color:var(--muted);margin-top:4px">${esc(whoName(n.by))} · ${ago(n.at)}</div></div>`).join('')}
+    ${!e.memo && !dayMemos.length && !(e.notes || []).length ? '<div class="empty" style="padding:14px 0">이 날의 메모가 없어요</div>' : ''}
+    ${!mine && db.users[e.owner].allowAccess ? '<button class="btn block" data-act="noteOpen" style="margin-top:8px">이 일정에 메모 남기기</button>' : ''}
     <button class="btn ghost block" data-act="memoForDay" data-date="${e.start}" style="margin-top:8px">이 날짜에 메모 쓰기</button>
     <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="evToPhone">휴대폰 캘린더에 추가</button><a class="btn ghost" style="display:grid;place-items:center;text-decoration:none" href="${googleURL(e)}" target="_blank" rel="noopener">구글 캘린더에 추가</a></div>
   `);
   actions.editEvent = () => { closeSheet(); eventSheet(e); };
+  actions.noteOpen = () => { closeSheet(); noteSheet(e); };
   actions.evToPhone = () => shareOrDownload(buildICS([e]), `${e.title.replace(/[\\/:*?"<>|]/g, '') || 'event'}.ics`);
 }
 
-/* 메모 작성 (사진 + 글 + 상대에게 보내기) */
-function memoCompose(date = S.sel || todayStr(), text = '') {
-  let image = '';
+/* 메모 작성 / 수정 (사진 + 글 + 상대에게 보내기) */
+function memoCompose(opts = {}) {
+  const m = opts.memo || null;
+  let image = m ? m.image : '';
+  const date = m ? m.date : (opts.date || todayStr());
   const draw = (sh) => {
     $('#m-photo', sh).innerHTML = image
       ? `<img src="${image}" alt="" /><button class="rm" type="button" id="m-rm">${ICON.x}</button>`
@@ -1002,12 +1028,12 @@ function memoCompose(date = S.sel || todayStr(), text = '') {
     const rm = $('#m-rm', sh); if (rm) rm.onclick = (ev) => { ev.stopPropagation(); image = ''; draw(sh); };
   };
   openSheet(`
-    <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>메모</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
+    <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m ? '메모 수정' : '메모'}</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
     <button type="button" class="photo-pick" id="m-photo"></button>
     <input type="file" accept="image/*" id="m-file" hidden />
-    <div class="field"><textarea id="m-text" rows="3" placeholder="메모를 남겨보세요">${esc(text)}</textarea></div>
-    <div class="field"><label>날짜</label><input type="date" id="m-date" value="${date}" /></div>
-    <div class="switch-row">상대방에게 보내기<button class="switch ${S.memoSend ? 'on' : ''}" id="m-send"></button></div>
+    <div class="field"><textarea id="m-text" rows="3" placeholder="메모를 남겨보세요">${esc(m ? m.text : (opts.text || ''))}</textarea></div>
+    ${m && m.chat ? '' : `<div class="field"><label>날짜</label><input type="date" id="m-date" value="${date}" /></div>`}
+    <div class="switch-row">상대방에게 보내기<button class="switch ${(m ? m.toPartner : S.memoSend) ? 'on' : ''}" id="m-send"></button></div>
   `, {
     bind: (sh) => {
       draw(sh);
@@ -1020,8 +1046,13 @@ function memoCompose(date = S.sel || todayStr(), text = '') {
     const t = $('#m-text', root).value.trim();
     if (!t && !image) { toast('메모나 사진을 넣어주세요'); return; }
     const send = $('#m-send', root).classList.contains('on');
-    addMemo(t, image, $('#m-date', root).value || date, send);
-    closeSheet();
+    const d = ($('#m-date', root) || {}).value || date;
+    if (m) {
+      const was = m.toPartner;
+      Object.assign(m, { text: t, image, date: d, toPartner: send, editedAt: Date.now() });
+      if (send && !was) notify('memo', `${me().name}님이 메모를 보냈어요: ${t || '사진'}`);
+      save(); closeSheet(); render(false, true); toast('메모를 고쳤어요');
+    } else { closeSheet(); addMemo(t, image, d, send); }
   };
 }
 function addMemo(text, image, date, send, replyTo = null, chat = false) {
@@ -1029,7 +1060,7 @@ function addMemo(text, image, date, send, replyTo = null, chat = false) {
   if (send) notify('memo', chat ? `${me().name}: ${text || '사진'}` : `${me().name}님이 메모를 보냈어요: ${text || '사진'}`);
   save();
   render();
-  if (S.screen !== 'inbox') toast(send ? `${you().name}에게 메모를 보냈어요` : '메모를 저장했어요');
+  if (!chat) toast(send ? `${you().name}에게 메모를 보냈어요` : '메모를 저장했어요');
 }
 function shrinkImage(file, max = 900) {
   return new Promise((res) => {
@@ -1050,28 +1081,152 @@ function pickFile(cb) {
   const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
   i.onchange = () => i.files[0] && cb(i.files[0]); i.click();
 }
-function photoDay(s) {
-  const mine = db.photos[ME][s]; const theirs = db.photos[YOU][s];
-  const upload = () => pickFile(async (f) => {
-    const src = await shrinkImage(f, 1280);
-    cropSheet(src, (img) => {
-      const had = !!db.photos[ME][s];
-      db.photos[ME][s] = { img, src, at: Date.now() };
-      notify('photo', `${me().name}님이 ${fmtDate(s)}에 사진을 ${had ? '바꿨어요' : '올렸어요'}`);
-      save(); render(); toast(`사진을 올렸어요 · ${you().name}에게도 보여요`);
-    });
+function pickFiles(cb) {
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.multiple = true;
+  i.onchange = () => i.files.length && cb([...i.files]); i.click();
+}
+/* 정사각형 가운데 자르기 (여러 장 올릴 때) */
+function autoSquare(src, out = 640) {
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => { const s0 = Math.min(img.width, img.height); const c = document.createElement('canvas'); c.width = out; c.height = out;
+      c.getContext('2d').drawImage(img, (img.width - s0) / 2, (img.height - s0) / 2, s0, s0, 0, 0, out, out); res(c.toDataURL('image/jpeg', 0.82)); };
+    img.onerror = () => res(''); img.src = src;
   });
-  if (!mine && !theirs) { upload(); return; }
-  const fig = (ph, who) => `<figure class="ph-fig"><img class="photo-view" src="${ph.img}" alt="" /><figcaption>${who} · ${ago(ph.at || Date.now())}</figcaption></figure>`;
+}
+/* 사진 올리기: 한 장이면 확대·위치 조정, 여러 장이면 가운데를 정사각형으로 */
+async function addPhotos(files, date) {
+  files = files.filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || ''));
+  if (!files.length) return;
+  if (files.length === 1) {
+    const src = await shrinkImage(files[0], 1080);
+    if (!src) { toast('사진을 열 수 없어요'); return; }
+    cropSheet(src, (img) => photoInfoSheet([{ img, src }], date));
+    return;
+  }
+  toast(`${files.length}장을 준비하는 중…`);
+  const items = [];
+  for (const f of files.slice(0, 30)) { const src = await shrinkImage(f, 1080); if (src) items.push({ img: await autoSquare(src), src }); }
+  photoInfoSheet(items, date);
+}
+function photoInfoSheet(items, date = todayStr()) {
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${items.length > 1 ? `사진 ${items.length}장` : '사진'} 올리기</h3><button class="icon-btn" data-act="phSave">${ICON.check}</button></div>
+    <div class="ph-preview">${items.map((x) => `<img src="${x.img}" alt="" />`).join('')}</div>
+    <div class="field"><label>날짜</label><input type="date" id="ph-date" value="${date}" /></div>
+    <div class="field"><label>메모</label><textarea id="ph-cap" rows="2" placeholder="사진에 남길 메모 (선택)"></textarea></div>
+    <p class="note" style="padding:0">올린 사진은 ${esc(you().name)}의 갤러리와 달력에도 바로 보여요</p>`);
+  actions.phSave = () => {
+    const d = $('#ph-date', root).value || date; const cap = $('#ph-cap', root).value.trim();
+    items.forEach((x, i) => db.gallery.push({ id: uid(), owner: ME, date: d, img: x.img, src: x.src || '', caption: cap, at: Date.now() + i }));
+    notify('photo', `${me().name}님이 사진 ${items.length > 1 ? items.length + '장을' : '을'} 올렸어요 (${fmtDate(d)})`);
+    save(); closeSheet(); render(); toast(`사진을 올렸어요 · ${you().name}에게도 보여요`);
+  };
+}
+/* 사진 크게 보기: 정보 + 메모 */
+function photoViewer(g) {
+  const mine = g.owner === ME;
+  const dayMemos = memosOn(g.date);
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(g.date)}</h3><button class="icon-btn" data-act="phShare" aria-label="공유">${ICON.share}</button></div>
+    <img class="photo-view" src="${g.img}" alt="" />
+    <div class="ph-info">
+      <div class="kv"><b>올린 사람</b><span>${esc(whoName(g.owner))}</span></div>
+      <div class="kv"><b>올린 시간</b><span>${fmtDate(ymd(new Date(g.at)))} ${clockLabel(g.at)}</span></div>
+    </div>
+    <div class="lbl-sm">메모</div>
+    ${mine ? `<div class="field"><textarea id="g-cap" rows="2" placeholder="이 사진에 메모 남기기">${esc(g.caption || '')}</textarea></div>
+      <div class="field"><label>날짜</label><input type="date" id="g-date" value="${g.date}" /></div>`
+      : (g.caption ? `<div class="detail-memo">${esc(g.caption)}</div>` : '<div class="empty" style="padding:8px 0">사진 메모가 없어요</div>')}
+    ${dayMemos.length ? `<div class="lbl-sm">이 날의 메모</div>${dayMemos.map((m) => `<div class="detail-memo">${esc(m.text) || '사진'}<div class="s" style="font-size:.75em;color:var(--muted);margin-top:4px">${esc(whoName(m.owner))}</div></div>`).join('')}` : ''}
+    ${mine ? `<div class="actions"><button class="btn" data-act="gSave">저장</button><button class="btn ghost" data-act="gAdjust">확대 · 위치 조정</button></div>` : ''}
+    <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="gDay">이 날 일정 보기</button>${mine ? '<button class="btn danger" data-act="gDelete">삭제</button>' : ''}</div>`);
+  actions.gSave = () => { g.caption = $('#g-cap', root).value.trim(); g.date = $('#g-date', root).value || g.date; save(); closeSheet(); render(); toast('저장했어요'); };
+  actions.gAdjust = () => { closeSheet(); cropSheet(g.src || g.img, (img) => { g.img = img; save(); render(); toast('조정했어요'); photoViewer(g); }); };
+  actions.gDelete = () => confirmSheet('이 사진을 삭제할까요?', `${esc(you().name)}의 갤러리에서도 사라져요`, '삭제', () => { db.gallery = db.gallery.filter((x) => x.id !== g.id); save(); render(); }, true);
+  actions.gDay = () => { closeSheet(); const d = parse(g.date); S.month = { y: d.getFullYear(), m: d.getMonth() }; go('day', { sel: g.date, viewPartner: false }); };
+  actions.phShare = async () => {
+    try {
+      const blob = await (await fetch(g.img)).blob(); const file = new File([blob], `nneow-${g.date}.jpg`, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+      const a = document.createElement('a'); a.href = g.img; a.download = file.name; a.click();
+    } catch { /* 취소 */ }
+  };
+}
+/* 달력 사진 모드에서 날짜 누르기 */
+function photoDay(s) {
+  const list = photosOn(s);
+  const upload = () => pickFiles((files) => addPhotos(files, s));
+  if (!list.length) { upload(); return; }
   openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
-    <div class="ph-list">${mine ? fig(mine, '내 사진') : ''}${theirs ? fig(theirs, esc(you().name) + '의 사진') : ''}</div>
-    ${mine ? `<div class="actions"><button class="btn ghost" data-act="phAdjust">확대 · 위치 조정</button><button class="btn ghost" data-act="phChange">사진 바꾸기</button></div>
-      <div class="actions" style="margin-top:8px"><button class="btn ghost" data-act="phDay">이 날 일정 보기</button><button class="btn danger" data-act="phDelete">내 사진 삭제</button></div>`
-    : `<div class="actions"><button class="btn" data-act="phChange">내 사진도 올리기</button><button class="btn ghost" data-act="phDay">이 날 일정 보기</button></div>`}`);
-  actions.phAdjust = () => { closeSheet(); cropSheet(mine.src || mine.img, (img) => { mine.img = img; mine.at = Date.now(); save(); render(); toast('조정했어요'); }); };
-  actions.phChange = () => { closeSheet(); upload(); };
-  actions.phDelete = () => { delete db.photos[ME][s]; save(); closeSheet(); render(); };
+    <div class="g-grid sheet-grid">${list.map((g) => `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span></button>`).join('')}</div>
+    <div class="actions"><button class="btn" data-act="phUpload">사진 올리기</button><button class="btn ghost" data-act="phDay">이 날 일정 보기</button></div>`);
+  actions.phUpload = () => { closeSheet(); upload(); };
   actions.phDay = () => { closeSheet(); go('day', { sel: s }); };
+}
+/* 휴대폰 갤러리 '공유 → nneow' 로 받은 사진 */
+async function receiveShared() {
+  if (!new URLSearchParams(location.search).has('share') || !('caches' in window)) return;
+  history.replaceState(history.state, '', location.pathname);
+  try {
+    const cache = await caches.open('nneow-share');
+    const meta = await cache.match('shared/meta'); if (!meta) return;
+    const { count } = await meta.json(); const files = [];
+    for (let i = 0; i < count; i++) { const r = await cache.match('shared/' + i); if (r) { const b = await r.blob(); files.push(new File([b], `shared-${i}.jpg`, { type: b.type || 'image/jpeg' })); } }
+    await caches.delete('nneow-share');
+    const run = () => { S.screen = 'gallery'; history.pushState({ screen: 'gallery' }, ''); render(true); addPhotos(files, todayStr()); };
+    // 서버 데이터를 받은 뒤에 올려야 덮어쓰이지 않음
+    if (CLOUD && C() && C().status !== 'live') { let n = 0; const t = setInterval(() => { if (C().status === 'live' || ++n > 30) { clearInterval(t); run(); } }, 500); } else run();
+  } catch { /* 무시 */ }
+}
+
+/* ================= 스티커 · 콕 찌르기 · 상대 일정 메모 ================= */
+function placeSticker(s) {
+  if (hasEventOn(YOU, s)) { toast('일정이 있는 날에는 붙일 수 없어요'); return; }
+  const kind = S.placing;
+  db.stickers = db.stickers.filter((x) => !(x.from === ME && x.to === YOU && x.date === s));
+  db.stickers.push({ id: uid(), from: ME, to: YOU, date: s, kind, at: Date.now() });
+  notify('sticker', `${me().name}님이 ${fmtDate(s)}에 ${STICKERS[kind].label} 스티커를 붙였어요`);
+  S.placing = null; save(); render(); toastHTML(`${STICKERS[kind].svg} ${esc(you().name)}의 캘린더에 붙였어요`);
+}
+function stickerSheet(x) {
+  const canRemove = x.from === ME || x.to === ME;
+  openSheet(`<div class="stk-big">${STICKERS[x.kind] ? STICKERS[x.kind].svg : ''}</div>
+    <div class="confirm-text">${esc(db.users[x.from].name)}의 ${STICKERS[x.kind] ? STICKERS[x.kind].label : ''} 스티커</div><div class="confirm-sub">${fmtDate(x.date)} · ${ago(x.at)}</div>
+    <div class="actions"><button class="btn ghost" data-act="close">닫기</button>${canRemove ? '<button class="btn danger" data-act="stkRemove">떼기</button>' : ''}</div>`, { center: true });
+  actions.stkRemove = () => { db.stickers = db.stickers.filter((y) => y.id !== x.id); save(); closeSheet(); render(); };
+}
+function pokeSheet() {
+  openSheet(`<div class="poke-hand">👉</div><div class="confirm-text">${esc(you().name)}를 콕 찌를까요?</div>
+    <div class="confirm-sub">${esc(you().name)}가 앱을 열자마자 이 메시지가 떠요</div>
+    <div class="field"><input id="poke-text" maxlength="60" placeholder="보고 싶어!" /></div>
+    <div class="actions"><button class="btn ghost" data-act="close">취소</button><button class="btn" data-act="pokeSend">콕 찌르기</button></div>`, { center: true });
+  actions.pokeSend = () => {
+    const text = $('#poke-text', root).value.trim() || '콕!';
+    db.pokes.push({ id: uid(), from: ME, to: YOU, text, at: Date.now(), seenAt: null });
+    if (db.pokes.length > 100) db.pokes = db.pokes.slice(-100);
+    notify('poke', `${me().name}님이 콕 찔렀어요: ${text}`);
+    save(); closeSheet(); toast(`${you().name}를 콕 찔렀어요`);
+  };
+}
+/* 받은 '콕'은 앱에 들어오자마자 띄움 */
+function showPokes() {
+  if ($('.overlay')) return;
+  const p = db.pokes.filter((x) => x.to === ME && !x.seenAt).sort((a, b) => a.at - b.at)[0];
+  if (!p) return;
+  openSheet(`<div class="poke-hand shake">👉</div><div class="confirm-text">${esc(db.users[p.from].name)}님이 콕 찔렀어요!</div>
+    <div class="poke-msg">${esc(p.text)}</div><div class="confirm-sub">${ago(p.at)}</div>
+    <div class="actions"><button class="btn block" data-act="pokeOk">확인</button></div>`, { center: true });
+  actions.pokeOk = () => { p.seenAt = Date.now(); save(); closeSheet(); };
+}
+function noteSheet(e) {
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${esc(e.title)}에 메모</h3><button class="icon-btn" data-act="noteSave">${ICON.check}</button></div>
+    <div class="confirm-sub" style="text-align:left">${esc(db.users[e.owner].name)}의 일정에 남기는 메모예요. 일정에 ● 표시로 보여요.</div>
+    <div class="field"><textarea id="note-text" rows="3" placeholder="메모를 남겨보세요"></textarea></div>`, { bind: (sh) => setTimeout(() => $('#note-text', sh).focus(), 250) });
+  actions.noteSave = () => {
+    const t = $('#note-text', root).value.trim(); if (!t) { toast('메모를 입력해 주세요'); return; }
+    e.notes = [...(e.notes || []), { id: uid(), by: ME, text: t, at: Date.now() }];
+    notify('note', `${me().name}님이 ‘${e.title}’ 일정에 메모를 남겼어요`);
+    save(); closeSheet(); render(); toast('메모를 남겼어요');
+  };
 }
 function cropSheet(src, onDone) {
   let st = null;
@@ -1199,7 +1354,7 @@ const actions = {
   toMonth: () => go('month'),
   toSearch: () => go('search'),
   toMemo: () => { closeSheet(); go('memo'); },
-  toInbox: () => go('inbox'),
+  toGallery: () => go('gallery'),
   toSettings: () => go('settings'),
   toColors: () => go('colors'),
   toSync: () => go('sync'),
@@ -1232,27 +1387,39 @@ const actions = {
     i.click();
   },
   removeImported: () => confirmSheet('가져온 일정을 모두 지울까요?', '', '지우기', () => { db.events = db.events.filter((e) => !(e.owner === ME && e.importUid)); save(); render(); }, true),
-  cancelReply: () => { S.replyTo = null; render(); },
-  chatImage: () => $('#kk-file').click(),
+  cancelReply: () => { S.replyTo = null; render(false, true); },
 
-  /* 할 일 */
-  toggleTodo: (el) => {
-    const t = db.todos.find((x) => x.id === el.dataset.id); if (!t) return;
-    t.done = !t.done;
-    if (t.shared && t.done) notify('todo', `${me().name}님이 같이 할 일을 끝냈어요: ${t.text}`);
+  /* ① LIST 완료 체크 */
+  toggleDone: (el) => {
+    const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
+    e.doneBy = { ...(e.doneBy || {}), [ME]: !isDone(e, ME) };
     save(); render();
   },
-  delTodo: (el) => { db.todos = db.todos.filter((x) => x.id !== el.dataset.id); save(); render(); },
-  todoShare: () => { S.todoShared = !S.todoShared; const v = $('[data-form="addTodo"] input').value; render(); const i = $('[data-form="addTodo"] input'); i.value = v; i.focus(); },
+
+  /* 갤러리 */
+  addPhotos: () => pickFiles((files) => addPhotos(files, todayStr())),
+  openPhoto: (el) => { const g = db.gallery.find((x) => x.id === el.dataset.id); if (g) { closeSheet(); photoViewer(g); } },
+  galFilter: (el) => { S.galFilter = el.dataset.v; render(); },
+
+  /* 스티커 · 콕 */
+  stickerPick: (el) => {
+    closeSheet();
+    if (!you().allowAccess) { toast(`${you().name}가 접근을 허용해야 스티커를 붙일 수 있어요`); return; }
+    S.placing = el.dataset.k; S.viewPartner = true; render();
+  },
+  cancelPlace: () => { S.placing = null; render(); },
+  openSticker: (el) => { const x = db.stickers.find((y) => y.id === el.dataset.id); if (x) stickerSheet(x); },
+  poke: () => pokeSheet(),
 
   /* 월 달력 */
-  smile: () => { S.photoMode = !S.photoMode; render(); toast(S.photoMode ? '사진으로 보기' : '일정으로 보기'); },
+  smile: () => { S.photoMode = !S.photoMode; render(); },
   prevMonth: () => shiftMonth(-1),
   nextMonth: () => shiftMonth(1),
   pickMonth: () => monthPicker(S.month.y),
-  togglePartner: () => { S.viewPartner = !S.viewPartner; render(); toast(S.viewPartner ? `${you().name}의 캘린더로 전환` : '내 캘린더로 전환'); },
+  togglePartner: () => { S.viewPartner = !S.viewPartner; S.placing = null; render(); },
   day: (el) => {
     const s = el.dataset.date;
+    if (S.placing) { placeSticker(s); return; }
     if (S.photoMode && !S.rangeStart) { photoDay(s); return; }
     if (S.rangeStart) {
       const a = S.rangeStart; S.rangeStart = null;
@@ -1281,20 +1448,31 @@ const actions = {
       <div class="actions"><button class="btn ghost" data-act="close">닫기</button>${mine ? '<button class="btn danger" data-act="delDeadline">레드라인 삭제</button>' : ''}</div>`, { center: true });
     actions.delDeadline = () => { db.deadlines = db.deadlines.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('레드라인을 지웠어요'); };
   },
-  memoForDay: (el) => { closeSheet(); memoCompose(el.dataset.date); },
+  memoForDay: (el) => { closeSheet(); memoCompose({ date: el.dataset.date }); },
   splitPrev: () => { S.sel = addDays(S.sel, -1); render(); },
   splitNext: () => { S.sel = addDays(S.sel, 1); render(); },
   gotoDay: (el) => { const s = el.dataset.date; const d = parse(s); S.month = { y: d.getFullYear(), m: d.getMonth() }; go('day', { sel: s, viewPartner: false }); },
 
   /* 메모 */
-  composeMemo: () => memoCompose(),
-  memoSendToggle: () => { S.memoSend = !S.memoSend; const v = $('[data-form="quickMemo"] input').value; render(); const i = $('[data-form="quickMemo"] input'); i.value = v; toast(S.memoSend ? `${you().name}에게 보내기 켜짐` : '나만 보기'); },
+  composeMemo: () => memoCompose({ date: todayStr() }),
+  memoTab: (el) => { S.memoTab = el.dataset.v; S.replyTo = null; render(true); },
+  memoPrivate: () => { S.memoPrivate = !S.memoPrivate; render(); },
+  memoView: (el) => { S.memoView = el.dataset.v; render(); },
+  openMemo: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) memoDetail(m); },
+  padImage: () => pickFile(async (f) => { S.memoImg = await shrinkImage(f); render(false, true); }),
+  padImgRm: () => { S.memoImg = ''; render(false, true); },
 
   /* 설정 */
   pickFont: () => optionSheet('글씨체 변경', FONTS, me().font, (k) => { me().font = k; }, (k, v) => `<span style="font-family:${v.css.replace(/"/g, '&quot;')}">${v.label} · 가나다 Aa</span>`),
   pickTheme: () => optionSheet('테마 변경', THEMES, me().theme, (k) => { me().theme = k; }),
   pickSize: () => optionSheet('글자 크기', SIZES, String(me().fs || 1), (k) => { me().fs = +k; }),
   pickColor: (el) => colorSheet(el.dataset.k),
+  toggleAccess: () => {
+    if (me().allowAccess) { me().allowAccess = false; save(); render(); toast('상대방 접근을 껐어요'); return; }
+    confirmSheet('상대방 접근을 허용하시겠습니까?', `${esc(you().name)}가 내 일정에 메모를 남기고<br/>내 캘린더에 스티커를 붙일 수 있어요`, '허용', () => {
+      me().allowAccess = true; notify('access', `${me().name}님이 접근을 허용했어요`); save(); render(); toast('접근을 허용했어요');
+    });
+  },
   editNames: () => {
     openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>이름</h3><button class="icon-btn" data-act="saveNames">${ICON.check}</button></div>
       <div class="field"><label>내 이름</label><input id="n-me" value="${esc(me().name)}" maxlength="12" /></div>
@@ -1351,7 +1529,9 @@ function moodPicker() {
   const mine = db.moods[ME];
   openSheet(`<div class="sheet-head"><span></span><h3>오늘의 표정</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
     <div class="confirm-sub" style="margin-top:-6px">고른 표정이 ${esc(you().name)}에게 알림으로 전송돼요</div>
-    <div class="face-grid">${Object.entries(FACES).filter(([k]) => k !== 'smile').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>`);
+    <div class="face-grid">${Object.entries(FACES).filter(([k]) => k !== 'smile').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>
+    <div class="lbl-sm" style="margin:18px 0 8px">스티커 · ${esc(you().name)}의 캘린더에 붙이기${you().allowAccess ? '' : ' (상대가 접근을 허용해야 해요)'}</div>
+    <div class="face-grid stk-grid">${Object.entries(STICKERS).map(([k, v]) => `<button data-act="stickerPick" data-k="${k}">${v.svg}${v.label}</button>`).join('')}</div>`);
   actions.moodPick = (el) => { closeSheet(); sendMood(el.dataset.k); };
 }
 
@@ -1389,8 +1569,17 @@ const LONG = {
     el.classList.add('pending'); redlineAsk(d);
   },
   memo: (el) => {
-    const m = db.memos.find((x) => x.id === el.dataset.id); if (!m || m.owner !== ME) return;
-    confirmSheet('이 메모를 삭제할까요?', esc((m.text || '사진').slice(0, 40)), '삭제', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(); }, true);
+    const m = db.memos.find((x) => x.id === el.dataset.id); if (!m) return;
+    if (m.owner !== ME) { memoDetail(m); return; }
+    memoMenu(m);
+  },
+  plus: () => go('list'), // ＋ 꾹 → 화면 ①
+  bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨ + 상대 진행률
+  evNote: (el) => {
+    const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
+    if (e.owner === ME) { eventDetail(e); return; }
+    if (!db.users[e.owner].allowAccess) { toast(`${db.users[e.owner].name}가 접근을 허용하지 않았어요`); return; }
+    noteSheet(e);
   },
 };
 let lpTimer = null, lpFired = false, lpStart = null;
@@ -1425,20 +1614,10 @@ document.addEventListener('submit', (e) => {
   const f = e.target.closest('[data-form]'); if (!f) return;
   e.preventDefault();
   const kind = f.dataset.form; const input = f.querySelector('input'); const v = input ? input.value.trim() : '';
-  if (kind === 'addTodo' && v) {
-    db.todos.push({ id: uid(), owner: ME, date: todayStr(), text: v, done: false, shared: !!S.todoShared });
-    if (S.todoShared) notify('todo', `${me().name}님이 같이 할 일을 추가했어요: ${v}`);
-    save(); render(); $('[data-form="addTodo"] input').focus();
-  } else if (kind === 'addShared' && v) {
-    db.todos.push({ id: uid(), owner: ME, date: todayStr(), text: v, done: false, shared: true });
-    notify('todo', `${me().name}님이 같이 할 일을 추가했어요: ${v}`);
-    save(); render();
-  } else if (kind === 'chatSend' && v) {
-    const r = S.replyTo; S.replyTo = null;
-    addMemo(v, '', todayStr(), true, r, true);
-    $('#kk-input') && $('#kk-input').focus();
-  } else if (kind === 'quickMemo' && v) {
-    addMemo(v, '', S.sel || todayStr(), S.memoSend);
+  if (kind === 'padSend' && (v || S.memoImg)) {
+    const r = S.replyTo; S.replyTo = null; const img = S.memoImg; S.memoImg = '';
+    addMemo(v, img, todayStr(), true, r, true);
+    $('#pad-input') && $('#pad-input').focus();
   }
 });
 
@@ -1446,6 +1625,8 @@ document.addEventListener('submit', (e) => {
 if (sessionStorage.getItem('nneow.openPair')) { sessionStorage.removeItem('nneow.openPair'); S.screen = 'pair'; history.replaceState({ screen: 'list' }, ''); history.pushState({ screen: 'pair' }, ''); }
 render();
 loadWeather();
+showPokes();
+receiveShared();
 if (window.nneowCloud) {
   window.nneowCloud.start({
     getDb: () => db,

@@ -15,7 +15,7 @@ const CONFIG = {
   measurementId: 'G-2J39P64M36',
 };
 const LS = 'nneow.cloud';
-const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog'];
+const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes'];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const available = typeof firebase !== 'undefined';
