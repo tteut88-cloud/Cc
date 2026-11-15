@@ -27,9 +27,20 @@ python3 -m http.server 8000
 ### 표정 규칙
 상대가 표정을 바꾼 뒤 **처음 앱을 열 때 한 번만** 그 표정이 보이고, 이후엔 다시 바꿀 때까지 스마일로 보입니다. 바꾼 지 1시간이 지나면 스마일로 초기화됩니다.
 
-## 데이터 / 공유
-현재는 기기 안(localStorage)에 두 사람의 데이터를 함께 저장하고, 같은 기기의 탭끼리 실시간으로 동기화합니다.
-서로 다른 휴대폰끼리 공유하려면 `app.js`의 `load()/save()`와 `storage` 이벤트 부분을 Firebase·Supabase 같은 실시간 DB로 바꾸면 됩니다.
+## 상대 휴대폰과 연결 (Firebase)
+설정 → **상대 휴대폰과 연결** → 로그인 → 한 사람이 **초대 코드 만들기**, 상대가 **코드 입력**.
+일정 · 메모 · 표정 · 대화 · 사진이 두 휴대폰 사이에 실시간으로 동기화됩니다. 연결 전에는 기기 안에만 저장돼요.
+
+Firebase 콘솔에서 한 번만 해둘 것:
+1. **Firestore Database** → 규칙 탭 → `firestore.rules` 내용을 붙여넣고 **게시**
+2. **Authentication** → 로그인 방법 → **Google** 사용 설정 (선택: **익명**도 사용 설정하면 ‘로그인 없이 시작’ 가능)
+3. 앱을 올린 주소를 Authentication → 설정 → **승인된 도메인**에 추가 (Firebase Hosting 주소는 자동 등록)
+
+배포 (둘 중 하나):
+- Firebase Hosting: `npm i -g firebase-tools && firebase login && firebase deploy` → `https://nneow-5a0ac.web.app` (보안 규칙도 같이 배포됨)
+- Netlify Drop: 폴더를 https://app.netlify.com/drop 에 끌어다 놓기 → 받은 주소를 승인된 도메인에 추가
+
+로컬 테스트: `firebase emulators:start --only auth,firestore` 실행 후 `http://localhost:8000/?emu=1`
 
 날씨: [Open-Meteo](https://open-meteo.com) (API 키 불필요), 위치 권한이 없으면 서울 기준.
 

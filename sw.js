@@ -1,10 +1,14 @@
 // 오프라인에서도 앱 화면이 열리도록 기본 파일을 캐시합니다.
-const CACHE = 'nneow-v2';
+const CACHE = 'nneow-v3';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './cloud.js',
+  './assets/vendor/firebase-app-compat.js',
+  './assets/vendor/firebase-auth-compat.js',
+  './assets/vendor/firebase-firestore-compat.js',
   './manifest.webmanifest',
   './assets/fonts/WantedSansVariable.woff2',
   './assets/icons/icon-192.png',

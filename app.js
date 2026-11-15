@@ -74,7 +74,8 @@ const FACES = {
 const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/>${(FACES[k] || FACES.smile).d}</svg>`;
 
 /* ================= 저장소 ================= */
-const KEY = 'duo.store.v1';
+const CLOUD = (() => { try { return JSON.parse(localStorage.getItem('nneow.cloud')); } catch { return null; } })();
+const KEY = CLOUD ? 'nneow.couple.' + CLOUD.cid : 'duo.store.v1';
 const DEFAULT_COLORS = { schedule: '#e0707c', plan: '#f5a94a', memo: '#6dbb6d', shared: '#5b8def' };
 const PALETTE = ['#e0707c', '#ff8fb1', '#f5a94a', '#f2cf4a', '#9ccc65', '#6dbb6d', '#4fc3b0', '#5bc0eb', '#5b8def', '#8e7cf0', '#b07cc6', '#9e9e9e'];
 
@@ -121,22 +122,38 @@ function seed() {
   };
 }
 
+function emptyDb() {
+  return {
+    v: 1,
+    users: {
+      a: { name: '나', colors: { ...DEFAULT_COLORS }, font: 'wanted', theme: 'light', fs: 1 },
+      b: { name: '상대', colors: { ...DEFAULT_COLORS, shared: '#ff8fb1' }, font: 'wanted', theme: 'light', fs: 1 },
+    },
+    events: [], deadlines: [], memos: [], todos: [], moods: {}, moodLog: [], photos: { a: {}, b: {} }, notifs: [],
+  };
+}
+function ensureShape(d) {
+  const e = emptyDb();
+  Object.keys(e).forEach((k) => { if (d[k] == null) d[k] = e[k]; });
+  d.photos.a = d.photos.a || {}; d.photos.b = d.photos.b || {};
+  ['a', 'b'].forEach((r) => { d.users[r] = { ...e.users[r], ...(d.users[r] || {}) }; d.users[r].colors = { ...e.users[r].colors, ...(d.users[r].colors || {}) }; });
+  return d;
+}
 function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
 let db = load();
-if (!db || !db.users) { db = seed(); }
+if (!db || !db.users) { db = CLOUD ? emptyDb() : seed(); }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch { toast('저장 공간이 부족해요. 사진 메모를 일부 지워주세요.'); }
+  catch { if (!CLOUD) toast('저장 공간이 부족해요. 사진 메모를 일부 지워주세요.'); }
+  if (CLOUD && window.nneowCloud) window.nneowCloud.push(db);
 }
-db.moodLog = db.moodLog || [];
-db.photos = db.photos || { a: {}, b: {} };
-db.photos.a = db.photos.a || {}; db.photos.b = db.photos.b || {};
-save();
+ensureShape(db);
+try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* 용량 초과 시 무시 */ }
 
 /* 사용자: 기본은 'a'. ?as=b 로 상대방 시점 */
 const params = new URLSearchParams(location.search);
-const ME = (params.get('as') === 'b' || params.get('as') === 'a') ? params.get('as') : (sessionStorage.getItem('duo.me') || localStorage.getItem('duo.me') || 'a');
-sessionStorage.setItem('duo.me', ME);
+const ME = CLOUD ? CLOUD.role : (params.get('as') === 'b' || params.get('as') === 'a') ? params.get('as') : (sessionStorage.getItem('duo.me') || localStorage.getItem('duo.me') || 'a');
+if (!CLOUD) sessionStorage.setItem('duo.me', ME);
 const YOU = ME === 'a' ? 'b' : 'a';
 const me = () => db.users[ME];
 const you = () => db.users[YOU];
@@ -218,7 +235,7 @@ function refreshSessionFace(markSeen) {
     S.sessionFace = 'smile'; S.sessionFaceAt = null;
   }
 }
-refreshSessionFace(true); // 앱에 들어온 순간: 마지막으로 바꾼 표정을 한 번만 보여줌
+refreshSessionFace(false); // 달력에 실제로 표시될 때 '봤음'으로 기록 (after.month)
 setInterval(() => { // 1시간이 지나면 스마일로 초기화
   const before = S.sessionFace; refreshSessionFace(false);
   if (before !== S.sessionFace && S.screen === 'month') render();
@@ -252,18 +269,24 @@ function systemNotify(n) {
 }
 
 /* 다른 탭(상대방)에서 바뀐 내용 실시간 반영 */
-window.addEventListener('storage', (e) => {
-  if (e.key !== KEY || !e.newValue) return;
+function applyRemote(next, persist) {
+  if (!next || !next.users) return;
   const prevIds = new Set(db.notifs.map((n) => n.id));
-  db = load() || db;
-  const fresh = db.notifs.filter((n) => n.to === ME && !prevIds.has(n.id));
+  db = ensureShape(next);
+  if (persist) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* 용량 초과 시 캐시 생략 */ } }
+  const fresh = db.notifs.filter((n) => n.to === ME && !prevIds.has(n.id) && Date.now() - n.at < 5 * 60e3).slice(-3);
   fresh.forEach((n) => {
     toastHTML(n.face ? `${face(n.face)} ${esc(n.text)}` : esc(n.text));
     systemNotify(n);
   });
-  if (fresh.some((n) => n.type === 'mood')) { S.sessionFaceAt = null; refreshSessionFace(true); bumpSmile = true; }
+  const pm = db.moods[YOU]; // 상대가 바꾼 표정을 아직 못 봤다면 (1시간 이내) 지금 보여줌
+  if (pm && !pm.seenAt && Date.now() - pm.at < HOUR && S.sessionFaceAt !== pm.at) { S.sessionFaceAt = null; refreshSessionFace(false); bumpSmile = true; }
   applyPrefs();
-  if (!$('.overlay')) render(); else renderQuiet = true;
+  if (!$('.overlay')) render(false, true); else renderQuiet = true;
+}
+window.addEventListener('storage', (e) => {
+  if (e.key !== KEY || !e.newValue) return;
+  applyRemote(load(), false);
 });
 let bumpSmile = false; let renderQuiet = false;
 
@@ -306,10 +329,19 @@ history.replaceState({ screen: 'list' }, '');
 
 /* ================= 렌더 ================= */
 const app = $('#app');
-function render(scrollTop) {
+function render(scrollTop, keepInput) {
+  let keep = null;
+  const ae = document.activeElement;
+  if (keepInput && ae && app.contains(ae) && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) {
+    const f = ae.closest('[data-form]');
+    keep = { sel: ae.id ? '#' + ae.id : f ? `[data-form="${f.dataset.form}"] [name="${ae.name}"]` : null, v: ae.value };
+  }
+  const sc = keepInput && $('.scroll', app); const top = sc ? sc.scrollTop : 0;
   const fn = SCREENS[S.screen] || SCREENS.list;
   app.innerHTML = fn();
   after[S.screen] && after[S.screen](scrollTop);
+  if (keepInput && S.screen !== 'inbox' && S.screen !== 'memo') { const n = $('.scroll', app); if (n) n.scrollTop = top; }
+  if (keep && keep.sel) { const n = $(keep.sel); if (n) { n.value = keep.v; n.focus(); } }
 }
 
 const topbar = (title, right = '') => `
@@ -437,6 +469,8 @@ SCREENS.month = () => {
 };
 after.month = () => {
   bumpSmile = false;
+  const pm = db.moods[YOU]; // 상대 표정이 화면에 처음 보인 순간 → 다음 접속부터는 스마일
+  if (pm && S.sessionFaceAt === pm.at && !pm.seenAt) { pm.seenAt = Date.now(); save(); }
   const g = $('#grid'); let sx = 0, sy = 0;
   g.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
   g.addEventListener('touchend', (e) => {
@@ -716,16 +750,81 @@ SCREENS.settings = () => `
       </ul>
       <div class="menu-title">우리 둘</div>
       <ul class="menu">
+        <li><button data-act="toPair">상대 휴대폰과 연결<span class="val">${cloudLabel()}</span>${ICON.right}</button></li>
         <li><button data-act="toSync">다른 캘린더와 동기화${ICON.right}</button></li>
         <li><button data-act="editNames">이름<span class="val">${esc(me().name)} · ${esc(you().name)}</span>${ICON.right}</button></li>
         <li><button data-act="askNotif">알림 허용<span class="val">${'Notification' in window ? ({ granted: '허용됨', denied: '차단됨', default: '꺼짐' }[Notification.permission]) : '지원 안 됨'}</span>${ICON.right}</button></li>
         <li><button data-act="refreshWx">날씨 새로고침<span class="val">${wx ? (wx.gps ? 'GPS 위치' : '서울 기준') : '-'}</span>${ICON.right}</button></li>
-        <li><button data-act="openPartnerTab">상대 화면 열기 (같은 기기)${ICON.right}</button></li>
+        ${CLOUD ? '' : `<li><button data-act="openPartnerTab">상대 화면 열기 (같은 기기 미리보기)${ICON.right}</button></li>`}
       </ul>
-      <ul class="menu"><li><button data-act="resetAll" style="color:var(--red)">모든 데이터 초기화</button></li></ul>
-      <p class="note">nneow · 지금 <b>${esc(me().name)}</b>(으)로 사용 중이에요. 데이터는 기기 안에 저장되며, 같은 기기의 두 탭(내 화면 / 상대 화면) 사이에 실시간으로 공유됩니다.</p>
+      ${CLOUD ? '' : '<ul class="menu"><li><button data-act="resetAll" style="color:var(--red)">모든 데이터 초기화</button></li></ul>'}
+      <p class="note">nneow · 지금 <b>${esc(me().name)}</b>(으)로 사용 중이에요. ${CLOUD ? '상대 휴대폰과 실시간으로 공유되고 있어요.' : '아직 상대 휴대폰과 연결되지 않아 이 기기 안에만 저장돼요. ‘상대 휴대폰과 연결’에서 연결해 주세요.'}</p>
     </div>
   </section>`;
+
+/* ---------- 상대 휴대폰과 연결 ---------- */
+const C = () => window.nneowCloud;
+function cloudLabel() {
+  const c = C(); if (!c || !c.available) return '사용 불가';
+  const st = c.status;
+  if (CLOUD) {
+    if (st === 'live') return c.members >= 2 ? '연결됨' : '상대 기다리는 중';
+    return { connecting: '연결 중…', 'signed-out': '로그인 필요', error: '오류' }[st] || '연결 중…';
+  }
+  return st === 'signed-in' ? '로그인됨' : '연결 안 됨';
+}
+SCREENS.pair = () => {
+  const c = C();
+  let body = '';
+  if (!c || !c.available) {
+    body = `<p class="note">서버 연결 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>`;
+  } else if (CLOUD && c.status === 'signed-out') {
+    body = `<div class="pair-hero">${ICON.lock}<b>로그인이 풀렸어요</b><span>연결했던 계정으로 다시 로그인해 주세요</span></div>
+      <div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button>
+      <button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>`;
+  } else if (CLOUD && c.members < 2 && CLOUD.role === 'a') {
+    body = `<div class="pair-hero"><span>상대 휴대폰의 nneow에서<br/>이 초대 코드를 입력해 주세요</span>
+      <div class="pair-code">${esc(CLOUD.code || '------')}</div>
+      <span class="pair-wait">상대를 기다리는 중…</span></div>
+      <div class="pair-actions"><button class="btn block" data-act="shareCode">초대 코드 보내기</button>
+      <button class="btn danger block" data-act="unpair">취소하고 연결 해제</button></div>`;
+  } else if (CLOUD) {
+    body = `<div class="pair-hero ok"><div class="pair-duo"><span class="kk-av">${esc(me().name.slice(0, 1))}</span><span class="pair-link"></span><span class="kk-av you">${esc(you().name.slice(0, 1))}</span></div>
+      <b>${esc(me().name)} · ${esc(you().name)}</b><span>${c.status === 'live' ? '실시간으로 함께 쓰는 중' : c.status === 'error' ? '동기화 오류: ' + esc(c.error) : '연결 중…'}</span></div>
+      <ul class="menu"><li><button data-act="editNames">이름 바꾸기${ICON.right}</button></li></ul>
+      <div class="pair-actions"><button class="btn danger block" data-act="unpair">이 기기 연결 해제</button></div>
+      <p class="note">연결을 해제해도 서버의 데이터는 지워지지 않아요. 같은 계정으로 다시 로그인하면 그대로 이어져요.</p>`;
+  } else if (c.status === 'signed-in') {
+    body = `<div class="field" style="padding:20px 20px 0"><label>내 이름</label><input id="p-name" maxlength="12" value="${esc(me().name === '나' ? '' : me().name)}" placeholder="상대에게 보일 이름" /></div>
+      <div class="pair-box"><b>처음 시작하는 사람</b><span>초대 코드를 만들어 상대에게 보내요</span><button class="btn block" data-act="createPair">초대 코드 만들기</button></div>
+      <div class="pair-box"><b>초대 코드를 받은 사람</b><span>상대가 보낸 6자리 코드를 입력해요</span>
+        <input id="p-code" maxlength="8" placeholder="예: K7M2QX" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.2em;font-weight:700;text-align:center" />
+        <button class="btn block" data-act="joinPair">연결하기</button></div>
+      <div class="pair-actions"><button class="btn ghost block" data-act="logout">다른 계정으로 로그인</button></div>`;
+  } else {
+    body = `<div class="pair-hero"><img src="assets/icons/logo.png" alt="" class="pair-logo" /><b>상대 휴대폰과 연결하기</b>
+      <span>로그인하고 초대 코드로 연결하면<br/>두 사람의 휴대폰이 실시간으로 공유돼요</span></div>
+      <div class="pair-actions"><button class="btn block" data-act="loginGoogle">구글로 로그인</button>
+      <button class="btn ghost block" data-act="loginAnon">로그인 없이 시작</button></div>
+      <p class="note">구글 로그인을 추천해요. 휴대폰을 바꿔도 같은 계정으로 로그인하면 그대로 이어져요.<br/>‘로그인 없이 시작’은 앱 데이터를 지우면 연결이 끊겨요.</p>`;
+  }
+  return `<section class="screen">${topbar('상대 휴대폰과 연결')}<div class="scroll">${body}</div></section>`;
+};
+async function cloudTry(fn, okMsg) {
+  try { await fn(); if (okMsg) toast(okMsg); }
+  catch (e) {
+    const code = e && e.code;
+    const msg = {
+      'auth/popup-closed-by-user': '로그인을 취소했어요',
+      'auth/unauthorized-domain': '이 주소가 Firebase에 등록되지 않았어요 (Authentication → 설정 → 승인된 도메인)',
+      'auth/operation-not-allowed': 'Firebase에서 이 로그인 방식을 켜주세요 (Authentication → 로그인 방법)',
+      'auth/admin-restricted-operation': 'Firebase에서 익명 로그인을 켜주세요 (Authentication → 로그인 방법)',
+      'permission-denied': '권한이 없어요. Firestore 보안 규칙을 확인해 주세요',
+    }[code] || (e && e.message) || '연결에 실패했어요';
+    toast(msg);
+  }
+  render(false, true);
+}
 
 /* ---------- 다른 캘린더와 동기화 ---------- */
 SCREENS.sync = () => {
@@ -1100,6 +1199,24 @@ const actions = {
   toSettings: () => go('settings'),
   toColors: () => go('colors'),
   toSync: () => go('sync'),
+  toPair: () => go('pair'),
+  loginGoogle: () => cloudTry(() => C().signInGoogle()),
+  loginAnon: () => cloudTry(() => C().signInAnon()),
+  logout: () => cloudTry(() => C().disconnect()),
+  createPair: () => { const n = ($('#p-name') || {}).value || ''; cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().createCouple(n.trim()); }); },
+  joinPair: () => {
+    const n = ($('#p-name') || {}).value || ''; const code = ($('#p-code') || {}).value || '';
+    if (code.trim().length < 6) { toast('6자리 초대 코드를 입력해 주세요'); return; }
+    cloudTry(async () => { sessionStorage.setItem('nneow.openPair', '1'); await C().joinCouple(code, n.trim()); });
+  },
+  shareCode: async () => {
+    const text = `nneow 초대 코드: ${CLOUD.code}\n${location.origin + location.pathname}`;
+    if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* 취소 */ } }
+    try { await navigator.clipboard.writeText(text); toast('초대 코드를 복사했어요'); } catch { toast(CLOUD.code); }
+  },
+  unpair: () => confirmSheet('이 기기의 연결을 해제할까요?', '서버의 데이터는 그대로 남아요', '해제', async () => {
+    await C().disconnect(); const u = new URL(location.href); u.searchParams.delete('as'); location.replace(u.pathname + u.search);
+  }, true),
   exportICS: () => shareOrDownload(buildICS(visibleEvents(ME)), 'nneow.ics'),
   importICS: () => {
     const i = document.createElement('input'); i.type = 'file'; i.accept = '.ics,text/calendar';
@@ -1322,8 +1439,23 @@ document.addEventListener('submit', (e) => {
 });
 
 /* ================= 시작 ================= */
+if (sessionStorage.getItem('nneow.openPair')) { sessionStorage.removeItem('nneow.openPair'); S.screen = 'pair'; history.replaceState({ screen: 'list' }, ''); history.pushState({ screen: 'pair' }, ''); }
 render();
 loadWeather();
+if (window.nneowCloud) {
+  window.nneowCloud.start({
+    getDb: () => db,
+    emptyDb,
+    applyRemote: (d) => applyRemote(d, true),
+    toast,
+    onStatus: () => { if (['pair', 'settings'].includes(S.screen) && !$('.overlay')) render(false, true); },
+    resetLocal: (cid, db0) => {
+      try { if (db0) localStorage.setItem('nneow.couple.' + cid, JSON.stringify(db0)); else localStorage.removeItem('nneow.couple.' + cid); } catch { /* 무시 */ }
+      sessionStorage.setItem('nneow.openPair', '1');
+      const u = new URL(location.href); u.searchParams.delete('as'); location.replace(u.pathname + u.search);
+    },
+  });
+}
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
