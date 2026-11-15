@@ -1,6 +1,6 @@
 {
-  "name": "우리 캘린더",
-  "short_name": "우리 캘린더",
+  "name": "nneow",
+  "short_name": "nneow",
   "description": "상대와 나, 둘만 공유하는 캘린더",
   "start_url": "./",
   "scope": "./",
