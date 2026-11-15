@@ -31,6 +31,7 @@ function init() {
   const app = firebase.initializeApp(CONFIG);
   auth = firebase.auth(app);
   fs = firebase.firestore(app);
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {}); // 앱을 닫았다 열어도 로그인 유지
   // 로컬 에뮬레이터로 시험할 때: ?emu=1
   const q = new URLSearchParams(location.search);
   if (q.get('emu')) sessionStorage.setItem('nneow.emu', '1');

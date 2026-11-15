@@ -611,3 +611,9 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .code-input { text-align: center; font-size: 1.5em !important; font-weight: 800; letter-spacing: .35em; }
 .pair-code { letter-spacing: .25em; }
 .g-oncal { position: absolute; right: 5px; top: 5px; font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.5); color: #fff; }
+.conn-banner { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); font-size: .85em; }
+.conn-banner span { color: var(--fg); opacity: .7; font-size: .92em; }
+.prog-list { margin: 10px 0 0; max-height: 40dvh; overflow-y: auto; }
+.prog-list .todo { padding: 8px 0; }
+.prog-list .chk { width: 22px; height: 22px; }
+.prog-list .txt { font-size: 1em; }

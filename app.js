@@ -404,6 +404,7 @@ SCREENS.list = () => {
       <span class="wx-dot ${wet ? 'wet' : ''}" title="${wet ? '비/눈' : ''}"></span>
       <span class="wx ${wet ? 'wet' : ''}">${cur ? `${wxIcon(cur.code)} ${cur.temp}°C` : `${ICON.cloud} --°C`}</span>
     </div>
+    ${connBanner()}
     <div class="scroll">
       <ul class="todo-list">
         ${items.length ? items.map((e) => { const done = isDone(e, ME); return `
@@ -418,6 +419,14 @@ SCREENS.list = () => {
     </div>
   </section>`;
 };
+
+/* 연결이 끊겼거나, 홈 화면 앱에서 아직 로그인하지 않았을 때 안내 */
+function connBanner() {
+  const c = window.nneowCloud; if (!c || !c.available) return '';
+  if (CLOUD && c.status === 'signed-out') return `<button class="conn-banner" data-act="toPair"><b>로그인이 풀려 연결이 끊겼어요</b><span>같은 계정으로 다시 로그인하면 그대로 이어져요 →</span></button>`;
+  if (!CLOUD && IS_STANDALONE && c.status !== 'signed-in') return `<button class="conn-banner" data-act="toPair"><b>상대와 연결하려면 한 번 로그인해 주세요</b><span>홈 화면 앱은 Safari와 따로 저장돼요. 같은 계정으로 로그인하면 바로 이어져요 →</span></button>`;
+  return '';
+}
 
 /* ---------- ② 월 달력 ---------- */
 SCREENS.month = () => {
@@ -500,7 +509,7 @@ SCREENS.month = () => {
       <button data-act="toMemo" aria-label="메모">${ICON.square}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
       <button data-act="togglePartner" data-lp="plus" class="${S.viewPartner ? 'on' : ''}" aria-label="상대 캘린더 전환">${ICON.plus}</button>
       <button data-act="toGallery" data-lp="bars" aria-label="갤러리">${ICON.bars}</button>
-      <button data-act="toSettings" aria-label="설정">${ICON.circle}</button>
+      <button data-act="toSettings" data-lp="circle" aria-label="설정">${ICON.circle}</button>
     </nav>
   </section>`;
 };
@@ -596,8 +605,9 @@ after.day = (fresh) => {
 
 /* ---------- ⑨ 함께 보는 일정 ---------- */
 SCREENS.split = () => {
-  const mine = db.events.filter((e) => e.owner === ME && covers(e, S.sel));
-  const yours = db.events.filter((e) => e.owner === YOU && covers(e, S.sel));
+  // 공유 일정은 양쪽 칸에 모두 표시
+  const mine = visibleEvents(ME).filter((e) => covers(e, S.sel));
+  const yours = visibleEvents(YOU).filter((e) => covers(e, S.sel));
   let hours = '';
   for (let h = 0; h < 24; h++) hours += `<div class="hour split"><div class="lbl">${hourLabel(h)}</div><div class="slot" data-act="slot" data-hour="${h}"></div><div class="slot"></div></div>`;
   const ad = (list) => list.filter((e) => !isTimed(e)).map((e) => `<button class="chip" style="--c:${colorOf(e)}" data-act="openEvent" data-id="${e.id}">${esc(e.title)}</button>`).join('');
@@ -605,10 +615,6 @@ SCREENS.split = () => {
   return `
   <section class="screen">
     ${topbar('함께 보는 일정')}
-    ${(() => { const p = progressOf(YOU); return `<div class="progress-card">
-      <div class="pc-top"><span>${esc(you().name)}의 오늘 진행률</span><b>${p.pct}%</b></div>
-      <div class="pc-bar"><i style="width:${p.pct}%"></i></div>
-      <div class="pc-sub">${p.total ? `오늘 일정 ${p.total}개 중 ${p.done}개 완료` : '오늘 등록된 일정이 없어요'}</div></div>`; })()}
     <div class="day-nav">
       <button data-act="splitPrev">${ICON.left}</button><span>${fmtDate(S.sel)}</span><button data-act="splitNext">${ICON.right}</button>
     </div>
@@ -1640,6 +1646,17 @@ function redlineAsk(target) {
   };
 }
 
+/* 상대의 오늘 진행률 (상대의 ① LIST 기준) */
+function progressSheet() {
+  const p = progressOf(YOU); const list = listToday(YOU);
+  openSheet(`<div class="progress-card" style="margin:0">
+      <div class="pc-top"><span>${esc(you().name)}의 오늘 진행률</span><b>${p.pct}%</b></div>
+      <div class="pc-bar"><i style="width:${p.pct}%"></i></div>
+      <div class="pc-sub">${p.total ? `오늘 일정 ${p.total}개 중 ${p.done}개 완료` : '오늘 등록된 일정이 없어요'}</div></div>
+    ${list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}"><span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span><span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : ''}
+    <div class="actions"><button class="btn block" data-act="close">닫기</button></div>`, { center: true });
+}
+
 /* ================= 꾹 누르기 ================= */
 const LONG = {
   mood: () => moodPicker(),
@@ -1659,7 +1676,8 @@ const LONG = {
     memoMenu(m);
   },
   plus: () => go('list'), // ＋ 꾹 → 화면 ①
-  bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨ + 상대 진행률
+  bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨
+  circle: () => progressSheet(), // ○ 꾹 → 상대의 오늘 진행률
   evNote: (el) => {
     const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
     if (e.owner === ME) { eventDetail(e); return; }
@@ -1718,7 +1736,7 @@ if (window.nneowCloud) {
     emptyDb,
     applyRemote: (d) => applyRemote(d, true),
     toast,
-    onStatus: () => { if (['pair', 'settings'].includes(S.screen) && !$('.overlay')) render(false, true); },
+    onStatus: () => { if (['pair', 'settings', 'list'].includes(S.screen) && !$('.overlay')) render(false, true); },
     resetLocal: (cid, db0) => {
       try { if (db0) localStorage.setItem('nneow.couple.' + cid, JSON.stringify(db0)); else localStorage.removeItem('nneow.couple.' + cid); } catch { /* 무시 */ }
       sessionStorage.setItem('nneow.openPair', '1');
@@ -1726,6 +1744,8 @@ if (window.nneowCloud) {
     },
   });
 }
+// 휴대폰이 저장공간을 정리할 때 앱 데이터(로그인 포함)를 지우지 않도록 요청
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch { /* 무시 */ }
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
