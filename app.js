@@ -52,6 +52,7 @@ const ICON = {
   upload: I('<path d="M12 16V5M7 9.5l5-5 5 5M5 19.5h14"/>'),
   google: I('<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
   bars: I('<path d="M7 5v14M12 5v14M17 5v14"/>'),
+  dots: I('<circle cx="7.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="16.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>'),
   grid: I('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
   list: I('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/>'),
   share: I('<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/>'),
@@ -423,13 +424,13 @@ SCREENS.list = () => {
               ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></button>`
               : `<button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>`}
             <span class="txt">${esc(e.title)}</span>
-            <span class="todo-when">${e.deadline ? '◢ ' : ''}${isTimed(e) ? timeLabel(e.startTime) : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}</span>
+            <span class="todo-when">${isTimed(e) ? `${timeLabel(e.startTime)}${e.endTime ? ` – ${timeLabel(e.endTime)}` : ''}` : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}${e.deadline ? ' <span class="dl-tri"></span>' : ''}</span>
             ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
           </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 누르면 바로 적을 수 있어요</li>')}
         ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>
           <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="enter" />
-            <label class="qt"><span>시간설정</span><input name="time" type="time" aria-label="시간설정" /></label>
-            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인">◢</button></form></li>` : ''}
+            <div class="qt-row"><label class="qt"><span>시작</span><input name="time" type="time" aria-label="시작 시간" /></label><em>–</em><label class="qt"><span>끝</span><input name="time2" type="time" aria-label="끝 시간" /></label>
+            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인"><span class="dl-tri"></span></button></div></form></li>` : ''}
       </ul>
       <div class="list-space"></div>
     </div>
@@ -476,7 +477,7 @@ after.list = () => {
     if (Math.abs(e.clientY - sy) > 12 || S.quickAdd) return; // 스크롤은 무시
     S.quickAdd = true; S.quickDeadline = false; render(false, true); const i = $('#quick-input'); if (i) i.focus();
   });
-  const qt = $('.qt input'); if (qt) qt.addEventListener('input', () => qt.parentElement.classList.toggle('has', !!qt.value));
+  $$('.qt input').forEach((q) => q.addEventListener('input', () => q.parentElement.classList.toggle('has', !!q.value)));
   const i = $('#quick-input');
   if (i) i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); i.form.requestSubmit(); } }); // 키보드 줄바꿈 = 등록
   if (i) { i.focus(); i.addEventListener('blur', () => setTimeout(() => { const f = i.closest('form'); if (S.quickAdd && !i.value.trim() && !(f && f.contains(document.activeElement))) { S.quickAdd = false; render(); } }, 200)); }
@@ -526,7 +527,7 @@ SCREENS.month = () => {
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
     return `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
+        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
@@ -591,8 +592,18 @@ SCREENS.month = () => {
     </nav>
   </section>`;
 };
+/* 칸에 다 안 들어가는 일정 이름은 '보이는 온전한 글자'까지만 */
+function fitBars(rootEl) {
+  $$('.bar', rootEl).forEach((b) => {
+    if (b.scrollWidth <= b.clientWidth + 1) return;
+    const full = [...(b.dataset.t || b.textContent)]; b.dataset.t = full.join('');
+    let n = full.length;
+    while (n > 0) { b.textContent = full.slice(0, n).join(''); if (b.scrollWidth <= b.clientWidth + 1) break; n--; }
+  });
+}
 after.month = () => {
   bumpSmile = false;
+  fitBars(app);
   // 기간 선택 메뉴를 마지막으로 꾹 누른 칸 옆에
   const pop = $('#range-pop'); const c = S.rangeEnd && $(`.cell[data-date="${S.rangeEnd}"]`);
   if (pop && c) {
@@ -1451,7 +1462,7 @@ SCREENS.photo = () => {
   const likes = Object.values(g.likes || {}).filter(Boolean).length; const liked = !!(g.likes && g.likes[ME]);
   const cs = g.comments || [];
   return `<section class="screen pv">
-    ${topbar(fmtDate(g.date), g.owner === ME ? `<span class="pv-top"><button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button><button class="icon-btn pv-dots" data-act="pvMemo" aria-label="메모">•••</button></span>` : '')}
+    ${topbar(fmtDate(g.date), g.owner === ME ? `<span class="pv-top"><button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button><button class="icon-btn" data-act="pvMemo" aria-label="메모">${ICON.dots}</button></span>` : '')}
     <div class="scroll">
       <div class="pv-main" id="pv-main"><img src="${g.src || g.img}" alt="" /></div>
       <div class="pv-strip" id="pv-strip">${list.map((x) => `<button class="${x.id === g.id ? 'on' : ''}" data-act="pvPick" data-id="${x.id}" id="pv-${x.id}"><img src="${x.img}" alt="" loading="lazy" /></button>`).join('')}</div>
@@ -1469,7 +1480,7 @@ function photoComments() {
   const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
   const cs = g.comments || [];
   openSheet(`<div class="sheet-head"><span></span><h3>댓글 ${cs.length}개</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
-    <div class="pv-post"><img src="${g.img}" alt="" /><div><b>${esc(whoName(g.owner))}</b><p>${g.caption ? esc(g.caption) : '<span class="muted">메모가 없어요</span>'}</p><em>${fmtDate(g.date)} · 좋아요 ${Object.values(g.likes || {}).filter(Boolean).length}개</em></div></div>
+    ${g.caption ? `<div class="pv-post"><img src="${g.img}" alt="" /><div><b>${esc(whoName(g.owner))}</b><p>${esc(g.caption)}</p><em>${fmtDate(g.date)} · 좋아요 ${Object.values(g.likes || {}).filter(Boolean).length}개</em></div></div>` : ''}
     <div class="pv-comments">${cs.map((c) => `<div class="cm"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('') || '<div class="empty" style="padding:16px 0">첫 댓글을 남겨보세요</div>'}</div>
     <form class="composer pv-form" data-form="photoCmt"><input name="text" id="pc-input" placeholder="댓글 달기" autocomplete="off" enterkeyhint="send" /><button class="icon-btn send" type="submit" aria-label="댓글 보내기">${ICON.send}</button></form>`,
   { bind: (sh) => setTimeout(() => { const i = $('#pc-input', sh); if (i) i.focus(); }, 250) });
@@ -1999,16 +2010,15 @@ const mealPct = (who) => Math.min(100, Math.round(Object.keys(mealsToday(who)).l
 function progressSheet() {
   const p = progressOf(YOU); const list = listToday(YOU);
   const ml = mealsToday(YOU); const mp = mealPct(YOU);
-  openSheet(`<button class="progress-card" data-act="progToggle" style="margin:0;width:100%;text-align:left">
+  openSheet(`<button class="progress-card" data-lp="progList" style="margin:0;width:100%;text-align:left">
       <div class="pc-top"><span>${esc(you().name)}의 오늘 일</span><b>${p.pct}%</b></div>
       <div class="pc-bar pink"><i style="width:${p.pct}%"></i></div>
       <div class="pc-sub">${p.total ? `오늘 일정 ${p.total}개 중 ${p.done}개 완료` : '오늘 등록된 일정이 없어요'}</div></button>
-    ${S.progOpen && list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}"><span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span><span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : ''}
     <button class="progress-card" data-act="mealOpen" style="margin:10px 0 0;width:100%;text-align:left">
       <div class="pc-top"><span>${esc(you().name)}의 오늘 밥</span><b>${mp}%</b></div>
       <div class="pc-bar green"><i style="width:${mp}%"></i></div>
       <div class="pc-sub">${MEALS.map(([k, l]) => `${l} ${ml[k] ? '✓' : '·'}`).join('  ')}</div></button>`, { center: true });
-  actions.progToggle = () => { S.progOpen = !S.progOpen; progressSheet(); };
+
   actions.mealOpen = () => mealSheet();
 }
 function mealSheet() {
@@ -2033,13 +2043,15 @@ function mealSheet() {
 function todoSheet(e) {
   openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>할 일 수정</h3><button class="icon-btn" data-act="tdSave">${ICON.check}</button></div>
     <div class="field"><input id="td-title" value="${esc(e.title)}" /></div>
-    <div class="date-row"><span>시간</span><input type="time" id="td-time" class="date-pill" value="${e.startTime || ''}" /></div>
+    <div class="date-row"><span>시작</span><input type="time" id="td-time" class="date-pill" value="${e.startTime || ''}" /></div>
+    <div class="date-row"><span>끝</span><input type="time" id="td-time2" class="date-pill" value="${e.endTime || ''}" /></div>
     <div class="switch-row">◢ 데드라인<button class="switch ${e.deadline ? 'on' : ''}" id="td-dl"></button></div>
     <button class="btn danger block" data-act="tdDel" style="margin-top:8px">삭제</button>`, { bind: (sh) => { $('#td-dl', sh).onclick = (x) => x.currentTarget.classList.toggle('on'); } });
   actions.tdSave = () => {
     const title = $('#td-title', root).value.trim(); if (!title) { toast('할 일을 입력해 주세요'); return; }
     const tm = $('#td-time', root).value;
-    Object.assign(e, { title, startTime: tm, endTime: tm ? `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}` : '', allDay: !tm, deadline: $('#td-dl', root).classList.contains('on') });
+    const t2 = $('#td-time2', root).value;
+    Object.assign(e, { title, startTime: tm, endTime: tm ? (t2 && t2 > tm ? t2 : `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}`) : '', allDay: !tm, deadline: $('#td-dl', root).classList.contains('on') });
     save(); closeSheet(); render(); toast('고쳤어요');
   };
   actions.tdDel = () => { db.events = db.events.filter((x) => x.id !== e.id); save(); closeSheet(); render(); toast('삭제했어요'); };
@@ -2094,6 +2106,11 @@ const LONG = {
     confirmSheet('이 목표를 지울까요?', esc(g.text), '지우기', () => { db.goals = db.goals.filter((x) => x.id !== g.id); save(); render(); }, true); },
   bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨
   circle: () => progressSheet(), // ○ 꾹 → 상대의 오늘 진행률
+  progList: () => { // 상대의 오늘 일 꾹 → 체크리스트 (화면을 꽉 채우지 않는 창)
+    const list = listToday(YOU);
+    openSheet(`<div class="confirm-text">${esc(you().name)}의 오늘 체크리스트</div>
+      ${list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}">${e.quick ? `<span class="tri ${d ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>` : `<span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span>`}<span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : '<div class="empty">오늘 등록된 일이 없어요</div>'}`, { center: true });
+  },
   evNote: (el) => {
     const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
     if (e.owner === ME && S.screen === 'split') { evMenu(e); return; } // 함께 보기: 꾹 → 수정 / 삭제
@@ -2149,7 +2166,8 @@ document.addEventListener('submit', (e) => {
     if (v) {
       const t = todayStr();
       const tm = (f.querySelector('[name=time]') || {}).value || ''; // 시간 없으면 맨 위, 있으면 시간 순서
-      const et = tm ? `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}` : '';
+      const t2 = (f.querySelector('[name=time2]') || {}).value || '';
+      const et = tm ? (t2 && t2 > tm ? t2 : `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}`) : '';
       db.events.push({ id: uid(), owner: ME, title: v, type: 'plan', allDay: !tm, start: t, end: t, startTime: tm, endTime: et, shared: false, deadline: !!S.quickDeadline, memo: '', quick: true, createdAt: Date.now() });
       S.quickDeadline = false;
       save();

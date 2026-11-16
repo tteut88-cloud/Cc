@@ -905,3 +905,31 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .pv-post em { font-style: normal; font-size: .76em; color: var(--muted); }
 .pv-post .muted { color: var(--muted); }
 .pv-comments { padding-left: 0; padding-right: 0; }
+
+/* ===== v24 ===== */
+/* 공유 갤러리: 한 줄에 3장 (3×n), 사진은 원래 비율 */
+.g-grid:not(.sheet-grid) { display: grid; columns: auto; grid-template-columns: repeat(3, 1fr); gap: 3px; align-items: start; padding: 0 3px; }
+.g-grid:not(.sheet-grid) .g-item { margin: 0; }
+/* 사진 보기 위쪽 아이콘: 조금 더 왼쪽, 서로 가깝게 */
+.pv .topbar { grid-template-columns: 52px 1fr 96px; }
+.pv-top { display: flex; justify-content: flex-end; gap: 0; padding-right: 10px; }
+.pv-top .icon-btn { width: 34px; height: 40px; }
+.pv-top .ico { width: 22px; height: 22px; }
+/* 비 오는 오늘: 비 네모보다 조금 진한 하늘색 동그라미 */
+.cell.today.rainy .num-wrap::before { background: rgba(61, 123, 224, .26); }
+.cell.today.rainy .rainbox { display: none; }
+:root[data-theme="dark"] .cell.today.rainy .num-wrap::before { background: rgba(106, 160, 255, .32); }
+/* 일정 글자: 잘린 글자 없이 */
+.bar { padding: 0 3px; }
+/* ① 시작–끝 시간, 데드라인 삼각형 */
+.quick-form { flex-wrap: wrap; row-gap: 6px; }
+.quick-form input[name=text] { flex: 1 1 100%; }
+.qt-row { display: flex; align-items: center; gap: 6px; flex: 1 1 100%; }
+.qt-row em { font-style: normal; color: var(--muted); }
+.qt-row .qt { flex: 0 0 100px; }
+.dl-tri { display: inline-block; width: 0; height: 0; border-style: solid; border-width: 0 0 9px 9px; border-color: transparent transparent currentColor transparent; vertical-align: -1px; }
+.quick-dl .dl-tri { border-width: 0 0 11px 11px; }
+/* 테마마다: 삼각형 테두리 = 체크박스 테두리 색 */
+.tri svg { stroke: var(--line-strong); }
+.tri.on svg { stroke: var(--fg); fill: var(--fg); }
+.prog-list { max-height: 50dvh; }
