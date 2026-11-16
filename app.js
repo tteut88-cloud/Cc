@@ -234,7 +234,8 @@ async function loadWeather(force = false) {
 }
 
 /* ================= 데이터 조회 ================= */
-const colorOf = (ev) => db.users[ev.owner].colors[ev.shared ? 'shared' : (ev.type || 'schedule')];
+// 공유 일정은 누가 공유했든 '내가 설정한 공유 색'으로 (상대 앱에서는 상대가 정한 색으로)
+const colorOf = (ev) => (ev.shared ? me().colors.shared : db.users[ev.owner].colors[ev.type || 'schedule']);
 const covers = (ev, s) => ev.start <= s && ev.end >= s;
 const isTimed = (e) => !e.allDay && e.start === e.end && e.startTime;
 /* 내 캘린더: 내 일정 + 상대가 공유한 일정 / 상대 캘린더(⑤): 상대 일정 + 내가 공유한 일정 */
@@ -341,6 +342,7 @@ const FONTS = {
   system: { label: '시스템 기본', css: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif' },
   serif: { label: '명조', css: '"Nanum Myeongjo", "AppleMyungjo", "Noto Serif KR", "Batang", serif' },
   busan: { label: '부산단디명조', css: '"BusanDandiMyeongjoL", "Nanum Myeongjo", "AppleMyungjo", serif' },
+  himchan: { label: '인천교육힘찬', css: '"IncheonHimchan", "Apple SD Gothic Neo", sans-serif' },
   round: { label: '둥근 고딕', css: '"Nanum Square Round", "NanumSquareRound", "Jua", "Apple SD Gothic Neo", sans-serif' },
 };
 const THEMES = { light: '화이트', pink: '핑크', cream: '크림', dark: '다크' };
@@ -386,6 +388,7 @@ function render(scrollTop, keepInput) {
   const fn = SCREENS[S.screen] || SCREENS.list;
   app.innerHTML = fn();
   after[S.screen] && after[S.screen](scrollTop);
+  try { sessionStorage.setItem('nneow.nav', JSON.stringify({ screen: S.screen, sel: S.sel, memoId: S.memoId, photoId: S.photoId, month: S.month, viewPartner: S.viewPartner, photoMode: S.photoMode, memoTab: S.memoTab, weekStart: S.weekStart, galFilter: S.galFilter })); } catch { /* 무시 */ }
   if (keepInput && S.screen !== 'inbox' && S.screen !== 'memo') { const n = $('.scroll', app); if (n) n.scrollTop = top; }
   if (keep && keep.sel) { const n = $(keep.sel); if (n) { n.value = keep.v; n.focus(); } }
 }
@@ -421,11 +424,14 @@ SCREENS.list = () => {
               ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></button>`
               : `<button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>`}
             <span class="txt">${esc(e.title)}</span>
-            <span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}</span>
+            <span class="todo-when">${e.deadline ? '◢ ' : ''}${isTimed(e) ? timeLabel(e.startTime) : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}</span>
             ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
-          </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 두 번 누르면 바로 추가할 수 있어요</li>')}
+          </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 누르면 바로 적을 수 있어요</li>')}
         ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>
-          <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="done" /><input name="time" type="time" class="quick-time" aria-label="시간 (선택)" /><button type="submit" class="quick-ok" aria-label="등록">${ICON.check}</button></form></li>` : ''}
+          <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="done" />
+            <input name="time" type="time" class="quick-time" aria-label="시간 (선택)" />
+            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인">◢</button>
+            <button type="submit" class="quick-ok" aria-label="저장">${ICON.check}</button></form></li>` : ''}
       </ul>
       <div class="list-space"></div>
     </div>
@@ -437,8 +443,7 @@ const weekOf = (s) => addDays(s, -parse(s).getDay()); // 그 주 일요일
 SCREENS.weekly = () => {
   const ws = S.weekStart || weekOf(todayStr()); const we = addDays(ws, 6);
   const goals = db.goals.filter((g) => g.owner === ME && g.week === ws).sort((a, b) => a.createdAt - b.createdAt);
-  const evs = visibleEvents(ME).filter((e) => e.start <= we && e.end >= ws).sort((a, b) => a.start.localeCompare(b.start) || (a.startTime || '').localeCompare(b.startTime || ''));
-  const done = goals.filter((g) => isDone(g, ME)).length + evs.filter((e) => isDone(e, ME)).length; const total = goals.length + evs.length;
+  const done = goals.filter((g) => isDone(g, ME)).length; const total = goals.length;
   const pct = total ? Math.round(done / total * 100) : 0;
   const d0 = parse(ws), d1 = parse(we);
   const thisWeek = ws === weekOf(todayStr());
@@ -456,13 +461,7 @@ SCREENS.weekly = () => {
         ${goals.map((g) => { const on = isDone(g, ME); return `<li class="todo quick ${on ? 'done' : ''}" data-lp="goal" data-id="${g.id}">
           <button class="tri ${on ? 'on' : ''}" data-act="toggleGoal" data-id="${g.id}" aria-label="달성">${tri(on)}</button><span class="txt">${esc(g.text)}</span></li>`; }).join('')}
         ${S.quickAdd ? `<li class="todo quick"><span class="tri">${tri()}</span><form data-form="goalAdd" class="quick-form"><input name="text" id="quick-input" placeholder="이번 주 목표" autocomplete="off" enterkeyhint="done" /></form></li>`
-          : (goals.length ? '' : '<li class="empty">빈 곳을 두 번 누르면 이번 주 목표를 적을 수 있어요</li>')}
-      </ul>
-      <div class="wk-sec">이번 주 일정</div>
-      <ul class="todo-list">
-        ${evs.map((e) => { const on = isDone(e, ME); const dd = parse(e.start); return `<li class="todo ${on ? 'done' : ''} ${e.quick ? 'quick' : ''}">
-          ${e.quick ? `<button class="tri ${on ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}">${tri(on)}</button>` : `<button class="chk ${on ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${on ? ICON.check : ''}</button>`}
-          <span class="txt">${esc(e.title)}</span><span class="todo-when">${e.deadline ? '◢ ' : ''}${dd.getMonth() + 1}/${dd.getDate()} (${WD[dd.getDay()]})</span></li>`; }).join('') || '<li class="empty">이번 주 일정이 없어요</li>'}
+          : (goals.length ? '' : '<li class="empty">빈 곳을 누르면 이번 주 목표를 적을 수 있어요</li>')}
       </ul>
       <div class="list-space"></div>
     </div>
@@ -471,20 +470,28 @@ SCREENS.weekly = () => {
 after.weekly = () => after.list();
 
 after.list = () => {
-  // 빈 곳을 두 번 누르면 오늘 일정 바로 추가
-  const sc = $('#list-scroll'); let last = 0, lx = 0, ly = 0;
+  // 빈 곳을 누르면 바로 적기
+  const sc = $('#list-scroll'); let sy = 0;
+  sc.addEventListener('pointerdown', (e) => { sy = e.clientY; });
   sc.addEventListener('pointerup', (e) => {
     if (e.target.closest('.todo:not(.empty), button, input, form')) return;
-    const now = Date.now();
-    if (now - last < 380 && Math.hypot(e.clientX - lx, e.clientY - ly) < 30) { last = 0; S.quickAdd = true; render(false, true); const i = $('#quick-input'); if (i) i.focus(); return; }
-    last = now; lx = e.clientX; ly = e.clientY;
+    if (Math.abs(e.clientY - sy) > 12 || S.quickAdd) return; // 스크롤은 무시
+    S.quickAdd = true; S.quickDeadline = false; render(false, true); const i = $('#quick-input'); if (i) i.focus();
   });
   const i = $('#quick-input');
   if (i) { i.focus(); i.addEventListener('blur', () => setTimeout(() => { const f = i.closest('form'); if (S.quickAdd && !i.value.trim() && !(f && f.contains(document.activeElement))) { S.quickAdd = false; render(); } }, 200)); }
 };
 
+/* 홈 화면에 추가한 앱에서 알림이 꺼져 있으면 켜기 안내 (아이폰은 버튼을 눌러야만 허용 창이 뜸) */
+function notifBanner() {
+  if (!('Notification' in window) || Notification.permission !== 'default') return '';
+  if (!IS_STANDALONE || localStorage.getItem('nneow.notifAsked')) return '';
+  return `<button class="conn-banner" data-act="askNotif"><b>알림 받기</b><span>${esc(you().name)}가 보낸 메모·표정·콕 찌르기를 알림으로 받아요 →</span></button>`;
+}
+
 /* 연결이 끊겼거나, 홈 화면 앱에서 아직 로그인하지 않았을 때 안내 */
 function connBanner() {
+  const nb = notifBanner(); if (nb) return nb;
   const c = window.nneowCloud; if (!c || !c.available) return '';
   if (CLOUD && c.status === 'signed-out') return `<button class="conn-banner" data-act="toPair"><b>로그인이 풀려 연결이 끊겼어요</b><span>같은 계정으로 다시 로그인하면 그대로 이어져요 →</span></button>`;
   if (!CLOUD && IS_STANDALONE && c.status !== 'signed-in') return `<button class="conn-banner" data-act="toPair"><b>상대와 연결하려면 한 번 로그인해 주세요</b><span>홈 화면 앱은 Safari와 따로 저장돼요. 같은 계정으로 로그인하면 바로 이어져요 →</span></button>`;
@@ -625,7 +632,7 @@ function stripHTML() {
 /* 날짜 제목 + 그날 메모가 있으면 메모 색 줄 (누르면 메모 보기) */
 function dateTitle(s, nav) {
   const ms = memosOn(s);
-  const col = ms.length ? (ms.find((x) => x.owner === ME) || ms[0]).color || db.users[(ms.find((x) => x.owner === ME) || ms[0]).owner].colors.memo : '';
+  const col = ms.length ? db.users[(ms.find((x) => x.owner === ME) || ms[0]).owner].colors.memo : ''; // 밑줄 = 설정의 메모 색
   const t = `<span class="dt-text">${fmtDate(s)}</span>${col ? `<span class="dt-line" style="--c:${col}"></span>` : ''}`;
   const inner = col ? `<button class="dt-btn" data-act="dayMemos" data-date="${s}">${t}</button>` : `<span class="dt-btn">${t}</span>`;
   return nav ? `<span class="dt-nav"><button data-act="splitPrev" aria-label="전날">${ICON.left}</button>${inner}<button data-act="splitNext" aria-label="다음날">${ICON.right}</button></span>` : inner;
@@ -638,8 +645,8 @@ function dayMemosSheet(s) {
 }
 
 /* 겹치는 일정을 나란히 배치 */
-function layoutTimed(list) {
-  const items = list.map((e) => ({ e, s: toMin(e.startTime), f: Math.max(toMin(e.endTime || e.startTime), toMin(e.startTime) + 30) }))
+function layoutTimed(list, minDur = 30) {
+  const items = list.map((e) => ({ e, s: toMin(e.startTime), f: Math.max(toMin(e.endTime || e.startTime), toMin(e.startTime) + minDur) }))
     .sort((a, b) => a.s - b.s || b.f - a.f);
   const cols = []; let group = []; let groupEnd = -1; const out = [];
   const flush = () => { const n = Math.max(1, ...group.map((g) => g.col + 1)); group.forEach((g) => { g.n = n; out.push(g); }); group = []; cols.length = 0; };
@@ -651,13 +658,14 @@ function layoutTimed(list) {
   if (group.length) flush();
   return out;
 }
+const shortTime = (t) => { if (!t) return ''; const [h, mm] = t.split(':').map(Number); return `${h % 12 === 0 ? 12 : h % 12}${mm ? ':' + pad(mm) : '시'}`; };
 function evBlocks(list, narrow) {
-  return layoutTimed(list).map((g) => {
+  return layoutTimed(list, narrow ? 60 : 30).map((g) => {
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
     const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
     return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
       ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
-      ${narrow ? '' : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
+      ${narrow ? `<small class="nt">${shortTime(g.e.startTime)}–${shortTime(g.e.endTime || g.e.startTime)}</small>` : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
     </button>`;
   }).join('');
 }
@@ -733,7 +741,7 @@ function quoteHTML(r) {
 function memoListItems() {
   const list = S.memoPrivate
     ? db.memos.filter((m) => m.owner === ME && !m.toPartner)
-    : db.memos.filter((m) => m.toPartner);
+    : db.memos.filter((m) => m.toPartner && !m.chat); // 나누기에서 나눈 메모는 모아보기에 올리지 않음
   return list.slice().sort((a, b) => b.createdAt - a.createdAt);
 }
 function memoAllHTML() {
@@ -786,7 +794,7 @@ function memoPadHTML() {
 }
 SCREENS.memo = () => `
   <section class="screen">
-    ${topbar('메모', S.memoTab === 'share' ? '<button class="poke-finger" data-act="poke" aria-label="콕 찌르기">👉</button>' : '')}
+    ${topbar('메모', S.memoTab === 'share' ? '<button class="poke-finger" data-act="poke" aria-label="콕 찌르기"><img src="assets/icons/poke.png" alt="" /></button>' : '')}
     <div class="memo-tabs"><button data-act="memoTab" data-v="all" class="${S.memoTab === 'all' ? 'on' : ''}">메모 모아보기</button><button data-act="memoTab" data-v="share" class="${S.memoTab === 'share' ? 'on' : ''}">메모 나누기</button></div>
     ${S.memoTab === 'share' ? memoPadHTML() : memoAllHTML()}
   </section>`;
@@ -1225,7 +1233,7 @@ function eventDetail(e) {
 
 /* 서식 있는 메모: 굵게 · 기울임 · 밑줄 · 가로선 */
 const RTE = [['bold', '<b>B</b>', '굵게'], ['italic', '<i>I</i>', '기울임'], ['underline', '<u>U</u>', '밑줄'], ['strikeThrough', '<s>S</s>', '가로선']];
-const rteBar = () => `<div class="rte-bar">${RTE.map(([c, l, t]) => `<button type="button" data-cmd="${c}" aria-label="${t}">${l}</button>`).join('')}</div>`;
+const rteBar = (photo) => `<div class="rte-bar">${RTE.map(([c, l, t]) => `<button type="button" data-cmd="${c}" aria-label="${t}">${l}</button>`).join('')}${photo ? '<button type="button" class="rte-photo" id="m-photo-btn" aria-label="사진 추가"><img src="assets/icons/photo.png" alt="" /></button>' : ''}</div>`;
 function bindRte(sh) {
   try { document.execCommand('styleWithCSS', false, false); } catch { /* 무시 */ }
   $$('.rte-bar button', sh).forEach((b) => {
@@ -1256,30 +1264,28 @@ function memoCompose(opts = {}) {
   let pickedColor = (m && m.color) || me().colors.memo;
   const colors = MEMO_COLORS.includes(pickedColor) ? MEMO_COLORS : [pickedColor, ...MEMO_COLORS];
   const draw = (sh) => {
-    $('#m-photo', sh).innerHTML = image
-      ? `<img src="${image}" alt="" /><button class="rm" type="button" id="m-rm">${ICON.x}</button>`
-      : `<span class="mp-add">${ICON.image}<span>사진 추가</span></span>`;
-    $('#m-photo', sh).classList.toggle('has', !!image);
+    $('#m-photo', sh).innerHTML = image ? `<img src="${image}" alt="" /><button class="rm" type="button" id="m-rm">${ICON.x}</button>` : '';
+    $('#m-photo', sh).style.display = image ? '' : 'none';
     const rm = $('#m-rm', sh); if (rm) rm.onclick = (ev) => { ev.stopPropagation(); image = ''; draw(sh); };
   };
   openSheet(`
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m ? '메모 수정' : '메모'}</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
     ${m && m.chat ? '' : `<div class="memo-top"><span class="mt-lbl">날짜</span><input type="date" id="m-date" class="date-pill" value="${date}" />
       <div class="memo-colors" id="m-colors">${colors.map((c) => `<button type="button" data-c="${c}" style="--c:${c}" class="${c === pickedColor ? 'on' : ''}" aria-label="메모지 색"></button>`).join('')}</div></div>`}
-    ${rteBar()}
-    <div id="m-text" class="rte memo-big-input" contenteditable="true" data-ph="메모를 남겨보세요">${m ? memoHTML(m) : esc(opts.text || '')}</div>
+    ${rteBar(true)}
+    <div class="memo-photo has" id="m-photo"></div>
+    <div id="m-text" class="rte memo-big-input tinted" style="--mc:${pickedColor}" contenteditable="true" data-ph="메모를 남겨보세요">${m ? memoHTML(m) : esc(opts.text || '')}</div>
     <div class="switch-row">상대방에게 보내기<button class="switch ${(m ? m.toPartner : S.memoSend) ? 'on' : ''}" id="m-send"></button></div>
-    <button type="button" class="memo-photo" id="m-photo"></button>
     <input type="file" accept="image/*" id="m-file" hidden />
   `, {
     full: true,
     bind: (sh) => {
       draw(sh);
-      $('#m-photo', sh).onclick = () => $('#m-file', sh).click();
+      $('#m-photo-btn', sh).onclick = () => $('#m-file', sh).click();
       $('#m-file', sh).onchange = async (ev) => { const f = ev.target.files[0]; if (f) { image = await shrinkImage(f); draw(sh); } };
       $('#m-send', sh).onclick = (ev) => ev.currentTarget.classList.toggle('on');
       bindRte(sh);
-      $$('#m-colors button', sh).forEach((b) => { b.onclick = () => { pickedColor = b.dataset.c; $$('#m-colors button', sh).forEach((x) => x.classList.toggle('on', x === b)); }; });
+      $$('#m-colors button', sh).forEach((b) => { b.onclick = () => { pickedColor = b.dataset.c; $$('#m-colors button', sh).forEach((x) => x.classList.toggle('on', x === b)); $('#m-text', sh).style.setProperty('--mc', pickedColor); }; });
     },
   });
   actions.saveMemo = () => {
@@ -1478,7 +1484,7 @@ function stickerSheet(x) {
   actions.stkRemove = () => { db.stickers = db.stickers.filter((y) => y.id !== x.id); save(); closeSheet(); render(); };
 }
 function pokeSheet() {
-  openSheet(`<div class="poke-hand">👉</div><div class="confirm-text">${esc(you().name)}를 콕 찌를까요?</div>
+  openSheet(`<div class="poke-hand"><img src="assets/icons/poke.png" alt="" /></div><div class="confirm-text">${esc(you().name)}를 콕 찌를까요?</div>
     <div class="confirm-sub">${esc(you().name)}가 앱을 열자마자 이 메시지가 떠요</div>
     <div class="field"><input id="poke-text" maxlength="60" placeholder="보고 싶어!" /></div>
     <div class="actions"><button class="btn ghost" data-act="close">취소</button><button class="btn" data-act="pokeSend">콕 찌르기</button></div>`, { center: true });
@@ -1504,7 +1510,7 @@ function showPokes() {
   if (showMoodAlert()) return;
   const p = db.pokes.filter((x) => x.to === ME && !x.seenAt).sort((a, b) => a.at - b.at)[0];
   if (!p) return;
-  openSheet(`<div class="poke-hand shake">👉</div><div class="confirm-text">${esc(db.users[p.from].name)}님이 콕 찔렀어요!</div>
+  openSheet(`<div class="poke-hand shake"><img src="assets/icons/poke.png" alt="" /></div><div class="confirm-text">${esc(db.users[p.from].name)}님이 콕 찔렀어요!</div>
     <div class="poke-msg">${esc(p.text)}</div><div class="confirm-sub">${ago(p.at)}</div>
     <div class="actions"><button class="btn block" data-act="pokeOk">확인</button></div>`, { center: true });
   actions.pokeOk = () => { p.seenAt = Date.now(); save(); closeSheet(); };
@@ -1731,6 +1737,7 @@ const actions = {
   cancelReply: () => { S.replyTo = null; render(false, true); },
 
   /* ① LIST 완료 체크 */
+  quickDl: () => { S.quickDeadline = !S.quickDeadline; const b = $('.quick-dl'); if (b) b.classList.toggle('on', S.quickDeadline); },
   toggleGoal: (el) => { const g = db.goals.find((x) => x.id === el.dataset.id); if (!g) return; g.doneBy = { ...(g.doneBy || {}), [ME]: !isDone(g, ME) }; save(); render(false, true); },
   weekPrev: () => { S.weekStart = addDays(S.weekStart || weekOf(todayStr()), -7); S.quickAdd = false; render(); },
   weekNext: () => { S.weekStart = addDays(S.weekStart || weekOf(todayStr()), 7); S.quickAdd = false; render(); },
@@ -1845,6 +1852,7 @@ const actions = {
   },
   askNotif: async () => {
     if (!('Notification' in window)) { toast('이 브라우저는 알림을 지원하지 않아요'); return; }
+    localStorage.setItem('nneow.notifAsked', '1');
     const p = await Notification.requestPermission(); render(); toast(p === 'granted' ? '알림을 켰어요' : '알림이 꺼져 있어요');
   },
   refreshWx: async () => { toast('날씨를 불러오는 중…'); await loadWeather(true); render(); },
@@ -1933,8 +1941,7 @@ function progressSheet() {
     <button class="progress-card" data-act="mealOpen" style="margin:10px 0 0;width:100%;text-align:left">
       <div class="pc-top"><span>${esc(you().name)}의 오늘 밥</span><b>${mp}%</b></div>
       <div class="pc-bar green"><i style="width:${mp}%"></i></div>
-      <div class="pc-sub">${MEALS.map(([k, l]) => `${l} ${ml[k] ? '✓' : '·'}`).join('  ')}</div></button>
-    <div class="actions"><button class="btn block" data-act="close">닫기</button></div>`, { center: true });
+      <div class="pc-sub">${MEALS.map(([k, l]) => `${l} ${ml[k] ? '✓' : '·'}`).join('  ')}</div></button>`, { center: true });
   actions.progToggle = () => { S.progOpen = !S.progOpen; progressSheet(); };
   actions.mealOpen = () => mealSheet();
 }
@@ -1954,6 +1961,13 @@ function mealSheet() {
     notify('photo', `${me().name}님이 오늘 ${label}을 올렸어요`);
     save(); mealSheet(); toast(`${label} 사진을 올렸어요`);
   });
+}
+
+function evMenu(e) {
+  openSheet(`<div class="confirm-text">${esc(e.title)}</div><div class="confirm-sub">${isTimed(e) ? `${timeLabel(e.startTime)} – ${timeLabel(e.endTime)}` : fmtDate(e.start)}</div>
+    <div class="actions"><button class="btn ghost" data-act="emEdit">수정</button><button class="btn danger" data-act="emDel">삭제</button></div>`, { center: true });
+  actions.emEdit = () => { closeSheet(); eventSheet(e); };
+  actions.emDel = () => { closeSheet(); db.events = db.events.filter((x) => x.id !== e.id); save(); render(); toast('삭제했어요'); };
 }
 
 /* 기간 고른 뒤: 위에서 고른 종류(연속 일정 / 데드라인)로 바로 입력 */
@@ -2000,6 +2014,7 @@ const LONG = {
   circle: () => progressSheet(), // ○ 꾹 → 상대의 오늘 진행률
   evNote: (el) => {
     const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
+    if (e.owner === ME && S.screen === 'split') { evMenu(e); return; } // 함께 보기: 꾹 → 수정 / 삭제
     if (e.owner === ME) { eventDetail(e); return; }
     if (!db.users[e.owner].allowAccess) { toast(`${db.users[e.owner].name}가 접근을 허용하지 않았어요`); return; }
     noteSheet(e);
@@ -2053,7 +2068,8 @@ document.addEventListener('submit', (e) => {
       const t = todayStr();
       const tm = (f.querySelector('[name=time]') || {}).value || ''; // 시간 없으면 맨 위, 있으면 시간 순서
       const et = tm ? `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}` : '';
-      db.events.push({ id: uid(), owner: ME, title: v, type: 'plan', allDay: !tm, start: t, end: t, startTime: tm, endTime: et, shared: false, deadline: false, memo: '', quick: true, createdAt: Date.now() });
+      db.events.push({ id: uid(), owner: ME, title: v, type: 'plan', allDay: !tm, start: t, end: t, startTime: tm, endTime: et, shared: false, deadline: !!S.quickDeadline, memo: '', quick: true, createdAt: Date.now() });
+      S.quickDeadline = false;
       save();
     }
     S.quickAdd = !!v; render(); const i = $('#quick-input'); if (i) i.focus();
@@ -2068,6 +2084,15 @@ document.addEventListener('submit', (e) => {
 
 /* ================= 시작 ================= */
 if (sessionStorage.getItem('nneow.leftMsg')) { sessionStorage.removeItem('nneow.leftMsg'); setTimeout(() => toast('상대가 연결을 끊었어요. 새 초대 코드로 다시 연결할 수 있어요'), 600); }
+// 새로고침: 첫 화면(LIST)이 아니라 보던 화면으로
+try {
+  const nav = JSON.parse(sessionStorage.getItem('nneow.nav') || 'null');
+  if (nav && nav.screen && nav.screen !== 'list' && SCREENS[nav.screen] && !sessionStorage.getItem('nneow.openPair')) {
+    Object.assign(S, nav); history.replaceState({ screen: 'list' }, '');
+    if (nav.screen !== 'month') history.pushState({ screen: 'month' }, '');
+    history.pushState({ screen: nav.screen, sel: nav.sel, memoId: nav.memoId, photoId: nav.photoId }, '');
+  }
+} catch { /* 무시 */ }
 if (sessionStorage.getItem('nneow.openPair')) { sessionStorage.removeItem('nneow.openPair'); S.screen = 'pair'; history.replaceState({ screen: 'list' }, ''); history.pushState({ screen: 'pair' }, ''); }
 render();
 loadWeather();
