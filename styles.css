@@ -762,3 +762,59 @@ textarea.mv-text { width: 100%; background: transparent; border: 0; border-radiu
 .week-nav .ico { width: 18px; height: 18px; }
 .wk-pct { color: var(--accent); font-weight: 800; font-size: .95em; }
 .wk-sec { margin: 20px 0 2px; font-size: .78em; font-weight: 700; color: var(--muted); }
+
+/* ===== v19 ===== */
+/* ② 달력 5줄 */
+.grid { grid-template-rows: repeat(5, minmax(0, 1fr)); }
+.cell.in-range { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.range-pop { position: absolute; z-index: 9; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.range-pop button { padding: 9px 14px; border-radius: 10px; font-weight: 700; font-size: .88em; text-align: left; white-space: nowrap; }
+.range-pop button:first-child { background: var(--fg); color: var(--bg); }
+.range-pop button:last-child { background: var(--soft); }
+.range-hint { display: none; }
+/* ① 빠른 추가: 시간 + 등록 */
+.quick-form { display: flex; align-items: center; gap: 6px; }
+.quick-form input[name=text] { flex: 1; min-width: 0; }
+.quick-time { width: 104px !important; flex: 0 0 104px; padding: 6px 8px !important; border-radius: 10px !important; background: var(--soft) !important; border: 0 !important; font-size: .9em !important; }
+.quick-ok { width: 34px; height: 34px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; flex-shrink: 0; }
+.quick-ok .ico { width: 18px; height: 18px; stroke-width: 2.6; }
+/* 메모 나누기: 손가락 */
+.poke-finger { font-size: 24px; width: 44px; height: 44px; display: grid; place-items: center; justify-self: end; border-radius: 12px; }
+.poke-finger:active { background: var(--soft); }
+/* 상대의 오늘 */
+.pc-top b { color: var(--fg); }
+.meal-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.meal-slot { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--soft); display: flex; align-items: center; justify-content: center; }
+.meal-slot img { width: 100%; height: 100%; object-fit: cover; }
+.meal-slot b { position: absolute; left: 6px; bottom: 6px; font-size: .72em; padding: 2px 7px; border-radius: 99px; background: rgba(0,0,0,.5); color: #fff; }
+.meal-empty { color: var(--muted); font-size: .82em; font-weight: 600; }
+.meal-empty .ico { width: 26px; height: 26px; }
+.meal-up { position: absolute; inset: 0; }
+/* 공유 앨범: 원래 비율 */
+.g-grid:not(.sheet-grid) { display: block; columns: 3; column-gap: 3px; padding: 0 3px; }
+.g-grid:not(.sheet-grid) .g-item { display: block; width: 100%; aspect-ratio: auto; margin-bottom: 3px; break-inside: avoid; border-radius: 4px; }
+.g-grid:not(.sheet-grid) .g-item img { height: auto; }
+/* 사진 크게 보기 */
+.pv .topbar h1 { font-size: 1em; }
+.pv-date { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.pv-date small { font-size: .72em; color: var(--muted); font-weight: 500; }
+.pv-top { display: flex; justify-content: flex-end; }
+.pv-top .icon-btn { width: 36px; }
+.pv-main { background: #000; display: flex; justify-content: center; align-items: center; min-height: 240px; max-height: 62dvh; touch-action: pan-y; }
+.pv-main img { max-width: 100%; max-height: 62dvh; object-fit: contain; display: block; }
+.pv-actions { display: flex; align-items: center; gap: 10px; padding: 10px 14px 4px; }
+.pv-like { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; }
+.pv-like.on { color: var(--accent); }
+.pv-like.on .ico { fill: color-mix(in srgb, var(--accent) 30%, transparent); }
+.pv-count { flex: 1; font-size: .88em; font-weight: 600; }
+.pv-share { width: 40px; height: 40px; display: grid; place-items: center; }
+.pv-cap { padding: 2px 16px 6px; font-size: .92em; }
+.pv-strip { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; scrollbar-width: none; }
+.pv-strip::-webkit-scrollbar { display: none; }
+.pv-strip button { flex: 0 0 56px; height: 56px; border-radius: 8px; overflow: hidden; opacity: .55; border: 2px solid transparent; }
+.pv-strip button.on { opacity: 1; border-color: var(--fg); }
+.pv-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv-comments { display: flex; flex-direction: column; gap: 6px; padding: 6px 16px; }
+.pv-form { border-top: 0; padding-top: 4px; }
+/* 함께 보기: 급히 추가한 일정은 글자로 */
+.ev-text { position: absolute; left: 6px; right: 6px; pointer-events: auto; text-align: left; font-size: .8em; font-weight: 700; color: var(--fg); background: none; padding: 0; transform: translateY(-50%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
