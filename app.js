@@ -145,7 +145,7 @@ function emptyDb() {
       b: { name: '상대', colors: { ...DEFAULT_COLORS, shared: '#ff8fb1' }, font: 'wanted', theme: 'light', fs: 1, allowAccess: false },
     },
     events: [], deadlines: [], memos: [], todos: [], moods: {}, moodLog: [], photos: { a: {}, b: {} }, notifs: [],
-    gallery: [], stickers: [], pokes: [], goals: [],
+    gallery: [], stickers: [], pokes: [], goals: [], settings: {},
   };
 }
 function ensureShape(d) {
@@ -197,7 +197,7 @@ const S = {
   memoView: 'list',
   memoImg: '',
   placing: null,
-  galFilter: 'all',
+  galFilter: 'all', // 'all' = 모든 사진(밥 제외), 'meal' = 밥
 };
 
 /* ================= 날씨 (GPS + Open-Meteo) ================= */
@@ -281,10 +281,14 @@ setInterval(() => { // 1시간이 지나면 스마일로 초기화
   if (before !== S.sessionFace && S.screen === 'month') render();
 }, 30e3);
 
+const SOS_FACES = ['cry', 'sick', 'angry'];
+const moodAlert = (k) => (SOS_FACES.includes(k) ? 'sos' : k === 'kiss' ? 'heart' : '');
+const BLACK_HEART = '<svg class="bh" viewBox="0 0 24 24"><path d="M12 21s-8.2-5-8.2-11.2A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.2 2.8C20.2 16 12 21 12 21z" fill="#111"/></svg>';
 function sendMood(k) {
-  db.moods[ME] = { face: k, at: Date.now(), seenAt: null };
+  const al = moodAlert(k);
+  db.moods[ME] = { face: k, at: Date.now(), seenAt: null, ...(al ? { alert: al, alertSeen: false } : {}) };
   db.moodLog.push({ id: uid(), owner: ME, face: k, at: Date.now() });
-  notify('mood', `${me().name}의 오늘 표정: ${FACES[k].label}`, { face: k });
+  notify('mood', al === 'sos' ? 'SOS!' : al === 'heart' ? '🖤' : `${me().name}의 오늘 표정: ${FACES[k].label}`, al ? { alert: al } : { face: k });
   save();
   S.flashFace = k; render();
   toastHTML(`${face(k)} 오늘의 표정을 ${esc(you().name)}에게 보냈어요`);
@@ -316,6 +320,7 @@ function applyRemote(next, persist) {
   if (persist) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* 용량 초과 시 캐시 생략 */ } }
   const fresh = db.notifs.filter((n) => n.to === ME && !prevIds.has(n.id) && Date.now() - n.at < 5 * 60e3).slice(-3);
   fresh.forEach((n) => {
+    if (n.alert) { systemNotify(n); return; } // SOS!·하트는 큰 알림으로만
     toastHTML(n.face ? `${face(n.face)} ${esc(n.text)}` : esc(n.text));
     systemNotify(n);
   });
@@ -487,7 +492,7 @@ function connBanner() {
 }
 
 /* ---------- ② 월 달력 ---------- */
-const BAR_TOP = 47, BAR_STEP = 19; // 일정 막대: 3개까지 같은 두께로
+const BAR_TOP = 37, BAR_STEP = 19, MAX_LANES = 4; // 일정 막대: 4개까지 같은 두께로
 SCREENS.month = () => {
   const { y, m } = S.month;
   const first = new Date(y, m, 1);
@@ -538,7 +543,7 @@ SCREENS.month = () => {
       let lane = lanes.findIndex((end) => end < vis0);
       if (lane === -1) { lane = lanes.length; lanes.push(-1); }
       lanes[lane] = vis1;
-      if (lane >= 3) return;
+      if (lane >= MAX_LANES) return;
       const contL = e.start < addDays(ws, vis0); const contR = e.end > addDays(ws, vis1);
       out += `<div class="bar ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${BAR_TOP + lane * BAR_STEP}px">${esc(e.title)}</div>`;
     });
@@ -891,7 +896,7 @@ function memoMenu(m) {
 /* ---------- 갤러리 (공유) ---------- */
 SCREENS.gallery = () => {
   const all = db.gallery.slice().sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at);
-  const list = all.filter((g) => S.galFilter === 'all' || (S.galFilter === 'me' ? g.owner === ME : g.owner === YOU));
+  const list = all.filter(galMatch);
   let lastM = '', html = '';
   list.forEach((g) => {
     const d = parse(g.date); const mk = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
@@ -900,8 +905,8 @@ SCREENS.gallery = () => {
   });
   if (lastM) html += '</div>';
   return `<section class="screen">
-    ${topbar('갤러리', `<button class="icon-btn" data-act="addPhotos" aria-label="사진 올리기">${ICON.plus}</button>`)}
-    <div class="g-filter">${[['all', '모두'], ['me', '내 사진'], ['you', esc(you().name)]].map(([k, l]) => `<button data-act="galFilter" data-v="${k}" class="${S.galFilter === k ? 'on' : ''}">${l}</button>`).join('')}<span class="g-count">${list.length}장</span></div>
+    ${topbar(`<span class="gal-name" data-lp="galName">${esc(galleryName())}</span>`, `<button class="icon-btn" data-act="addPhotos" aria-label="사진 올리기">${ICON.plus}</button>`)}
+    <div class="g-filter">${[['all', '모든 사진'], ['meal', '밥']].map(([k, l]) => `<button data-act="galFilter" data-v="${k}" class="${S.galFilter === k ? 'on' : ''}">${l}</button>`).join('')}<span class="g-count">${list.length}장</span></div>
     <div class="scroll">${html || `<div class="empty">아직 사진이 없어요<br/>＋를 눌러 사진을 올리거나, 휴대폰 갤러리에서 ‘공유 → nneow’로 보내보세요</div>`}<div style="height:24px"></div></div>
   </section>`;
 };
@@ -1392,7 +1397,9 @@ function photoViewer(g) {
   };
 }
 /* 사진 크게 보기: 위(날짜·시간·휴지통) · 사진(원래 비율) · 공유/좋아요/댓글 · 아래 작은 사진들(옆으로 넘김) */
-const galleryList = () => db.gallery.slice().sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at).filter((g) => S.galFilter === 'all' || (S.galFilter === 'me' ? g.owner === ME : g.owner === YOU));
+const galMatch = (g) => (S.galFilter === 'meal' ? !!g.meal : !g.meal); // 밥 사진은 '밥'에만
+const galleryName = () => (db.settings && db.settings.galleryName) || '갤러리';
+const galleryList = () => db.gallery.slice().sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at).filter(galMatch);
 SCREENS.photo = () => {
   const list = galleryList(); const g = db.gallery.find((x) => x.id === S.photoId) || list[0];
   if (!g) return `<section class="screen">${topbar('사진')}<div class="empty">사진이 없어요</div></section>`;
@@ -1484,8 +1491,17 @@ function pokeSheet() {
   };
 }
 /* 받은 '콕'은 앱에 들어오자마자 띄움 */
+/* 상대의 SOS! / 검은 하트: 그것만 크게 띄우고, 누르면 사라짐 */
+function showMoodAlert() {
+  const m = db.moods[YOU];
+  if (!m || !m.alert || m.alertSeen || Date.now() - m.at > 24 * HOUR) return false;
+  root.innerHTML = `<div class="overlay center mood-alert" data-act="moodAlertOk"><div class="ma-body">${m.alert === 'sos' ? '<span class="sos">SOS!</span>' : BLACK_HEART}</div></div>`;
+  actions.moodAlertOk = () => { m.alertSeen = true; save(); root.innerHTML = ''; setTimeout(showPokes, 0); };
+  return true;
+}
 function showPokes() {
   if ($('.overlay')) return;
+  if (showMoodAlert()) return;
   const p = db.pokes.filter((x) => x.to === ME && !x.seenAt).sort((a, b) => a.at - b.at)[0];
   if (!p) return;
   openSheet(`<div class="poke-hand shake">👉</div><div class="confirm-text">${esc(db.users[p.from].name)}님이 콕 찔렀어요!</div>
@@ -1910,13 +1926,13 @@ function progressSheet() {
   const p = progressOf(YOU); const list = listToday(YOU);
   const ml = mealsToday(YOU); const mp = mealPct(YOU);
   openSheet(`<button class="progress-card" data-act="progToggle" style="margin:0;width:100%;text-align:left">
-      <div class="pc-top"><span>${esc(you().name)}의 오늘 할 일</span><b>${p.pct}%</b></div>
-      <div class="pc-bar"><i style="width:${p.pct}%"></i></div>
+      <div class="pc-top"><span>${esc(you().name)}의 오늘 일</span><b>${p.pct}%</b></div>
+      <div class="pc-bar pink"><i style="width:${p.pct}%"></i></div>
       <div class="pc-sub">${p.total ? `오늘 일정 ${p.total}개 중 ${p.done}개 완료` : '오늘 등록된 일정이 없어요'}</div></button>
     ${S.progOpen && list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}"><span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span><span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : ''}
     <button class="progress-card" data-act="mealOpen" style="margin:10px 0 0;width:100%;text-align:left">
       <div class="pc-top"><span>${esc(you().name)}의 오늘 밥</span><b>${mp}%</b></div>
-      <div class="pc-bar"><i style="width:${mp}%"></i></div>
+      <div class="pc-bar green"><i style="width:${mp}%"></i></div>
       <div class="pc-sub">${MEALS.map(([k, l]) => `${l} ${ml[k] ? '✓' : '·'}`).join('  ')}</div></button>
     <div class="actions"><button class="btn block" data-act="close">닫기</button></div>`, { center: true });
   actions.progToggle = () => { S.progOpen = !S.progOpen; progressSheet(); };
@@ -1972,6 +1988,11 @@ const LONG = {
     confirmSheet('이 메모를 삭제할까요?', esc((m.text || '사진').slice(0, 40)), '삭제하기', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(false, true); toast('삭제했어요'); }, true);
   },
   plus: () => go('list'), // ＋ 꾹 → 화면 ①
+  galName: () => { // 갤러리 이름 꾹 → 이름 바꾸기 (둘이 같이 보는 이름)
+    openSheet(`<div class="confirm-text">갤러리 이름</div><div class="field" style="margin-top:12px"><input id="gal-name" maxlength="20" value="${esc(galleryName())}" /></div>
+      <div class="actions"><button class="btn ghost" data-act="close">취소</button><button class="btn" data-act="galNameSave">바꾸기</button></div>`, { center: true });
+    actions.galNameSave = () => { db.settings = { ...(db.settings || {}), galleryName: $('#gal-name', root).value.trim() || '갤러리' }; save(); closeSheet(); render(); };
+  },
   square: () => { S.weekStart = weekOf(todayStr()); S.quickAdd = false; go('weekly'); }, // □ 꾹 → WEEKLY
   goal: (el) => { const g = db.goals.find((x) => x.id === el.dataset.id); if (!g) return;
     confirmSheet('이 목표를 지울까요?', esc(g.text), '지우기', () => { db.goals = db.goals.filter((x) => x.id !== g.id); save(); render(); }, true); },
@@ -2008,6 +2029,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const fn = actions[el.dataset.act]; if (!fn) return;
   if (el.dataset.act === 'overlay') { if (e.target === el) closeSheet(); return; } // 시트 안 입력창 클릭은 그대로 둠
+  if (el.dataset.act === 'moodAlertOk') { e.preventDefault(); actions.moodAlertOk(); return; }
   e.preventDefault();
   fn(el, e);
 }, true);

@@ -51,6 +51,7 @@ function init() {
 function flatten(db) {
   const m = new Map();
   ARRAYS.forEach((col) => (db[col] || []).forEach((o) => m.set(`${col}__${o.id}`, JSON.stringify(o))));
+  if (db.settings && Object.keys(db.settings).length) m.set('settings__main', JSON.stringify(db.settings)); // 갤러리 이름 등 둘이 같이 쓰는 설정
   ['a', 'b'].forEach((r) => {
     if (db.users && db.users[r]) m.set(`users__${r}`, JSON.stringify(db.users[r]));
     if (db.moods && db.moods[r]) m.set(`moods__${r}`, JSON.stringify(db.moods[r]));
@@ -66,6 +67,7 @@ function unflatten(m) {
     if (ARRAYS.includes(col)) db[col].push(o);
     else if (col === 'users') db.users[id] = { ...db.users[id], ...o };
     else if (col === 'moods') db.moods[id] = o;
+    else if (col === 'settings') db.settings = o;
     else if (col === 'photos') { const r = id.slice(0, 1); db.photos[r][id.slice(2)] = o; }
   }
   db.notifs.sort((a, b) => a.at - b.at);
