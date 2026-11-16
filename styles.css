@@ -715,3 +715,50 @@ textarea.mv-text { width: 100%; background: transparent; border: 0; border-radiu
 .actions.col { flex-direction: column; }
 .actions.col > .btn, .actions.col > .actions { flex: none; width: 100%; }
 .bar-more { top: 3px; }
+
+/* ===== v18 ===== */
+@font-face { font-family: "BusanDandiMyeongjoL"; font-display: swap; src: url("assets/fonts/BusanDandiMyeongjoL.woff2") format("woff2"); }
+/* ① 삼각형 크게 */
+.tri { width: 30px; height: 30px; }
+.tri svg { width: 26px; height: 26px; stroke-width: 2.2; }
+.todo.done .txt { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
+/* ② 연속 일정은 원래 막대로, 개수 숫자 없음 */
+.bar-more { display: none; }
+.range-hint { padding: 5px; gap: 6px; }
+.range-hint > span { font-size: .9em; color: var(--muted); padding: 0 2px; }
+.seg.mini { padding: 3px; border-radius: 99px; }
+.seg.mini button { height: 30px; padding: 0 12px; border-radius: 99px; font-size: .85em; }
+/* ＋ 탭 색 그대로 */
+.bottombar button.on { color: inherit; }
+/* 메모 입력: 큰 화면 */
+.overlay.full { align-items: stretch; }
+.overlay.full .sheet { max-width: 480px; max-height: none; height: 100dvh; border-radius: 0; display: flex; flex-direction: column; padding-top: calc(env(safe-area-inset-top) + 8px); animation: up .2s ease; }
+.overlay.full .memo-big-input { flex: 1; min-height: 0; overflow-y: auto; }
+.memo-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.memo-top .mt-lbl { font-weight: 600; flex-shrink: 0; }
+.memo-top .date-pill { width: 140px; flex: 0 0 140px; }
+.memo-top .memo-colors { margin-left: auto; gap: 6px; }
+.memo-top .memo-colors button { width: 22px; height: 22px; }
+.rte-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+.rte-bar button { width: 40px; height: 36px; border-radius: 10px; background: var(--soft); font-size: 1em; font-family: Georgia, serif; }
+.rte-bar button.on { background: var(--fg); color: var(--bg); }
+.rte { background: var(--soft); border-radius: 12px; padding: 14px; outline: none; line-height: 1.6; word-break: break-word; white-space: pre-wrap; }
+.rte:empty::before { content: attr(data-ph); color: var(--muted); }
+.memo-view .rte { background: transparent; padding: 0; min-height: 160px; font-size: 1.22em; }
+.memo-view .rte-bar { margin: 4px 0 12px; }
+/* 메모 모아보기 댓글 */
+.ml-wrap { display: flex; flex-direction: column; }
+.ml-comments, .mv-comments { display: flex; flex-direction: column; gap: 6px; padding: 8px 4px 2px 18px; }
+.cm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: .86em; }
+.cm b { font-weight: 700; }
+.cm em { font-style: normal; color: var(--muted); font-size: .82em; }
+.cm-reply { font-size: .8em; color: var(--muted); font-weight: 700; margin-left: auto; padding: 2px 6px; }
+.cm.reply { padding-left: 18px; position: relative; }
+.cm.reply::before { content: "ㄴ"; position: absolute; left: 2px; color: var(--muted); }
+/* WEEKLY */
+.week-nav { display: flex; align-items: center; gap: 4px; }
+.week-nav button { width: 28px; height: 28px; display: grid; place-items: center; margin-left: -6px; }
+.week-nav button:last-child { margin-left: 0; }
+.week-nav .ico { width: 18px; height: 18px; }
+.wk-pct { color: var(--accent); font-weight: 800; font-size: .95em; }
+.wk-sec { margin: 20px 0 2px; font-size: .78em; font-weight: 700; color: var(--muted); }

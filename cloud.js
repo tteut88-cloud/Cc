@@ -19,7 +19,7 @@ const SAME_ORIGIN_AUTH = /(^|\.)(meow-ced8f\.web\.app|meow-ced8f\.firebaseapp\.c
 if (SAME_ORIGIN_AUTH) CONFIG.authDomain = location.hostname;
 const IS_STANDALONE_APP = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 const LS = 'nneow.cloud';
-const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes'];
+const ARRAYS = ['events', 'deadlines', 'memos', 'todos', 'notifs', 'moodLog', 'gallery', 'stickers', 'pokes', 'goals'];
 
 const available = typeof firebase !== 'undefined';
 let auth = null, fs = null, hooks = null;
