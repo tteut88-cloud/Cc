@@ -979,3 +979,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .cell.pmode.has-hol .cell-photo-wrap { margin-top: 26px; }
 .cell.pmode.has-hol .day-notes { top: 58px; }
 .cell.pmode.has-hol .memo-bar { top: 32px; }
+
+/* 사진 캘린더: 맨 윗줄(일정 한 칸) = 기념일 자리, 그 밑에 정사각형 사진 — 기념일이 없어도 같은 자리 */
+.cell.pmode .cell-photo-wrap, .cell.pmode.has-hol .cell-photo-wrap { position: absolute; top: 56px; left: 3px; right: 3px; width: auto; margin: 0; }
+.cell.pmode .cell-photo-wrap .cell-photo { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px; }
+.cell.pmode .day-notes, .cell.pmode.has-hol .day-notes { top: 58px; }
+.cell.pmode .memo-bar, .cell.pmode.has-hol .memo-bar { top: 32px; }
