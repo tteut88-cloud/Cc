@@ -540,13 +540,14 @@ SCREENS.month = () => {
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
     return `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
+        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol && !S.photoMode ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
-          ${hol ? `<span class="hol hol-top" style="top:${BAR_TOP}px">${hol}</span>` : ''}
+          ${S.photoMode
+            ? (notes.length ? `<span class="hol hol-top ptitle" style="top:${BAR_TOP}px">${esc(notes[notes.length - 1].text)}</span>` : '')
+            : (hol ? `<span class="hol hol-top" style="top:${BAR_TOP}px">${hol}</span>` : '')}
           ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" /></div>` : ''}
-          ${notes.length ? `<div class="day-notes">${notes.slice(0, 3).map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>` : ''}
 
           ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}" style="left:${Math.round((stk.x ?? 0.5) * 100)}%;top:${Math.round((stk.y ?? 0.78) * 100)}%">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
@@ -612,7 +613,7 @@ SCREENS.month = () => {
 };
 /* 칸에 다 안 들어가는 일정 이름은 '보이는 온전한 글자'까지만 */
 function fitBars(rootEl) {
-  $$('.bar', rootEl).forEach((b) => {
+  $$('.bar, .ptitle', rootEl).forEach((b) => {
     if (b.scrollWidth <= b.clientWidth + 1) return;
     const full = [...(b.dataset.t || b.textContent)]; b.dataset.t = full.join('');
     let n = full.length;
@@ -1557,17 +1558,29 @@ function dayPhotoMenu(id, s) {
   actions.dpMove = (el) => { const d = +el.dataset.d; const arr = list.slice(); const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; reorder(arr); };
   actions.dpDel = () => { db.gallery = db.gallery.filter((x) => x.id !== id); save(); closeSheet(); render(); if (photosOn(s).length) photoDay(s); toast('삭제했어요'); };
 }
-/* 사진 캘린더에서 날짜 꾹 → 짧은 말 (사진 위에 일정처럼) */
-function dayNoteSheet(s) {
-  const mine = db.dayNotes.filter((x) => x.date === s);
-  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)} 한마디</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
-    ${mine.length ? `<div class="dn-list">${mine.map((x) => `<div class="dn-item"><span>${esc(x.text)}</span><em>${esc(whoName(x.owner))}</em>${x.owner === ME ? `<button data-act="dnDel" data-id="${x.id}" aria-label="지우기">${ICON.x}</button>` : ''}</div>`).join('')}</div>` : ''}
-    <div class="field"><input id="dn-text" maxlength="20" placeholder="사진 위에 올릴 짧은 말 (20자)" enterkeyhint="done" /></div>`, { bind: (sh) => setTimeout(() => $('#dn-text', sh).focus(), 250) });
+/* 사진 캘린더에서 날짜 꾹 → 사진 제목(짧은 말). 적힌 글자를 누르면 고치기 */
+function dayNoteSheet(s, editId) {
+  const list = db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at);
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)} 사진 제목</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
+    ${list.length ? `<div class="dn-list">${list.map((x) => x.id === editId
+      ? `<div class="dn-item editing"><input id="dn-edit" maxlength="20" value="${esc(x.text)}" enterkeyhint="done" /><button data-act="dnUpdate" data-id="${x.id}" aria-label="고치기">${ICON.check}</button></div>`
+      : `<div class="dn-item"><button class="dn-text" data-act="dnEdit" data-id="${x.id}">${esc(x.text)}</button><em>${esc(whoName(x.owner))}</em><button data-act="dnDel" data-id="${x.id}" aria-label="지우기">${ICON.x}</button></div>`).join('')}</div>` : ''}
+    ${editId ? '' : `<div class="field"><input id="dn-text" maxlength="20" placeholder="사진 제목 (20자)" enterkeyhint="done" /></div>
+    <p class="note" style="padding:0">맨 마지막에 적은 제목이 사진 위 칸에 보여요. 적힌 글자를 누르면 고칠 수 있어요.</p>`}`,
+  { bind: (sh) => setTimeout(() => { const i = $('#dn-edit', sh) || $('#dn-text', sh); if (i) { i.focus(); i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); (editId ? actions.dnUpdate({ dataset: { id: editId } }) : actions.dnSave()); } }); } }, 250) });
   actions.dnSave = () => {
-    const t = $('#dn-text', root).value.trim(); if (!t) { closeSheet(); return; }
-    db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t, at: Date.now() }); save(); closeSheet(); render();
+    const inp = $('#dn-text', root); const t = inp ? inp.value.trim() : '';
+    if (editId) { actions.dnUpdate({ dataset: { id: editId } }); return; }
+    if (t) { db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t, at: Date.now() }); save(); render(); }
+    closeSheet();
   };
-  actions.dnDel = (el) => { db.dayNotes = db.dayNotes.filter((x) => x.id !== el.dataset.id); save(); closeSheet(); render(); dayNoteSheet(s); };
+  actions.dnEdit = (el) => dayNoteSheet(s, el.dataset.id);
+  actions.dnUpdate = (el) => {
+    const x = db.dayNotes.find((y) => y.id === el.dataset.id); const v = ($('#dn-edit', root) || {}).value;
+    if (x && v != null) { if (v.trim()) { x.text = v.trim(); x.editedAt = Date.now(); } else db.dayNotes = db.dayNotes.filter((y) => y.id !== x.id); save(); render(); }
+    dayNoteSheet(s);
+  };
+  actions.dnDel = (el) => { db.dayNotes = db.dayNotes.filter((x) => x.id !== el.dataset.id); save(); render(); dayNoteSheet(s); };
 }
 /* 휴대폰 갤러리 '공유 → nneow' 로 받은 사진 */
 async function receiveShared() {
