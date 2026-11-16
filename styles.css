@@ -996,3 +996,22 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* 날짜 사진 창: 제목 가운데 */
 .dp-title { text-align: center; font-weight: 700; font-size: 1.02em; margin: -4px 0 12px; }
 .g-who { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+
+/* ===== v33 ===== */
+/* 하루 종일 칸: 일정 한 줄 높이, 가로 3개, 넘치면 옆으로 스크롤 */
+.allday-row { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: center; }
+.allday-row::-webkit-scrollbar { display: none; }
+.allday.allday-row { padding: 8px 12px; height: 44px; }
+.allday-row .chip { flex: 0 0 calc((100% - 12px) / 3); height: 26px; line-height: 26px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: clip; text-align: center; font-size: .78em; }
+.allday-row .chip.stk-chip, .allday-row .chip.red { flex-basis: auto; max-width: 70%; }
+/* 함께 보기: 위쪽 하루 종일 칸 */
+.split-allday { display: grid; grid-template-columns: 70px 1fr 1fr; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.split-allday .allday-row { padding: 6px; height: 38px; }
+.split-allday .allday-row + .allday-row { border-left: 1px solid var(--line); }
+.split-allday .chip { flex: 0 0 calc((100% - 6px) / 2); font-size: .72em; }
+/* 같은 시간대 일정은 칸을 나눠서 나란히 */
+.ev { box-sizing: border-box; }
+.ev .ev-t { display: inline-block; max-width: calc(100% - 12px); white-space: nowrap; overflow: hidden; vertical-align: top; }
+.ev small, .ev small.nt { white-space: nowrap; overflow: hidden; }
+.ev { padding: 4px 6px; }
+.ev small, .ev small.nt { text-overflow: clip; }

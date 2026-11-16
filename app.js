@@ -616,8 +616,8 @@ SCREENS.month = () => {
   </section>`;
 };
 /* 칸에 다 안 들어가는 일정 이름은 '보이는 온전한 글자'까지만 */
-function fitBars(rootEl) {
-  $$('.bar, .ptitle', rootEl).forEach((b) => {
+function fitBars(rootEl, sel = '.bar, .ptitle') {
+  $$(sel, rootEl).forEach((b) => {
     if (b.scrollWidth <= b.clientWidth + 1) return;
     const full = [...(b.dataset.t || b.textContent)]; b.dataset.t = full.join('');
     let n = full.length;
@@ -680,12 +680,16 @@ function dayMemosSheet(s) {
 
 /* 겹치는 일정을 나란히 배치 */
 function layoutTimed(list, minDur = 30, snap = false) {
-  const items = list.map((e) => {
+  const items = list.slice().sort((a, b) => toMin(a.startTime) - toMin(b.startTime) || toMin(b.endTime) - toMin(a.endTime)).map((e) => {
     let s0 = toMin(e.startTime), f0 = Math.max(toMin(e.endTime || e.startTime), s0 + minDur);
-    if (snap) { s0 = Math.floor(s0 / 60) * 60; f0 = Math.max(Math.ceil(f0 / 60) * 60, s0 + 60); } // 시간 칸에 꽉 차게
+    if (snap) { // 시작한 시간 칸부터, 끝나는 시간 칸까지 꽉 차게 (1:30~1:40 → 1시~2시 한 칸)
+      const e0 = toMin(e.endTime || e.startTime);
+      s0 = Math.floor(toMin(e.startTime) / 60) * 60;
+      f0 = Math.max(Math.ceil(Math.max(e0, s0 + 1) / 60) * 60, s0 + 60);
+    }
     return { e, s: s0, f: f0 };
   })
-    .sort((a, b) => a.s - b.s || b.f - a.f);
+    .sort((a, b) => a.s - b.s || toMin(a.e.startTime) - toMin(b.e.startTime) || b.f - a.f); // 같은 칸이면 먼저 시작한 일정이 왼쪽
   const cols = []; let group = []; let groupEnd = -1; const out = [];
   const flush = () => { const n = Math.max(1, ...group.map((g) => g.col + 1)); group.forEach((g) => { g.n = n; out.push(g); }); group = []; cols.length = 0; };
   items.forEach((it) => {
@@ -702,7 +706,7 @@ function evBlocks(list, narrow) {
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
     const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
     return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
-      ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
+      <span class="ev-t">${esc(g.e.title)}</span>${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
       ${narrow ? `<small class="nt">${timeLabel(g.e.startTime)} – ${timeLabel(g.e.endTime || g.e.startTime)}</small>` : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
     </button>`;
   }).join('');
@@ -719,10 +723,10 @@ SCREENS.day = () => {
   <section class="screen">
     ${topbar(dateTitle(S.sel), `<button class="icon-btn" data-act="newEvent" aria-label="일정 추가">${ICON.plus}</button>`)}
     ${stripHTML()}
-    ${allday.length || dls.length || stkDay ? `<div class="allday">
+    ${allday.length || dls.length || stkDay ? `<div class="allday allday-row">
       ${stkDay ? `<button class="chip stk-chip" data-act="openSticker" data-id="${stkDay.id}">${STICKERS[stkDay.kind] ? STICKERS[stkDay.kind].svg : ''} ${esc(db.users[stkDay.from].name)}의 스티커</button>` : ''}
       ${dls.map((d) => `<button class="chip red" data-act="openDeadline" data-id="${d.id}">레드라인 · ${esc(d.title)} ${d.to === S.sel ? '· 오늘까지' : `· ${diffDays(S.sel, d.to)}일 남음`}</button>`).join('')}
-      ${allday.map((e) => `<button class="chip" style="--c:${colorOf(e)}" data-act="openEvent" data-id="${e.id}">${esc(e.title)}${e.start !== e.end ? ` (${parse(e.start).getDate()}–${parse(e.end).getDate()}일)` : ''}</button>`).join('')}
+      ${allday.map((e) => `<button class="chip evc" style="--c:${colorOf(e)}" data-act="openEvent" data-lp="evNote" data-id="${e.id}">${esc(e.title)}</button>`).join('')}
     </div>` : ''}
     <div class="scroll" id="tl-scroll">
       <div class="timeline">
@@ -733,6 +737,7 @@ SCREENS.day = () => {
   </section>`;
 };
 after.day = (fresh) => {
+  fitBars(app, '.chip.evc, .ev-t');
   const st = $('#sd-' + S.sel); const strip = $('#strip');
   if (st && strip) strip.scrollLeft = st.offsetLeft;
   if (fresh) {
@@ -752,21 +757,23 @@ SCREENS.split = () => {
   const yours = visibleEvents(YOU).filter((e) => covers(e, S.sel));
   let hours = '';
   for (let h = 0; h < 24; h++) hours += `<div class="hour split"><div class="lbl">${hourLabel(h)}</div><div class="slot" data-act="slot" data-hour="${h}"></div><div class="slot"></div></div>`;
-  const ad = (list) => list.filter((e) => !isTimed(e)).map((e) => `<button class="chip" style="--c:${colorOf(e)}" data-act="openEvent" data-id="${e.id}">${esc(e.title)}</button>`).join('');
+  const ad = (list) => list.filter((e) => !isTimed(e)).map((e) => `<button class="chip evc" style="--c:${colorOf(e)}" data-act="openEvent" data-lp="evNote" data-id="${e.id}">${esc(e.title)}</button>`).join('');
+  const adM = ad(mine), adY = ad(yours);
   return `
   <section class="screen">
     ${topbar(dateTitle(S.sel, true))}
     <div class="split-head"><span></span><span>내 일정</span><span>${esc(you().name)} 일정</span></div>
+    ${adM || adY ? `<div class="split-allday"><span></span><div class="allday-row">${adM}</div><div class="allday-row">${adY}</div></div>` : ''}
     <div class="scroll" id="tl-scroll">
       <div class="timeline">
         ${hours}
-        <div class="ev-layer half" style="width:calc((100% - 70px) / 2)">${evBlocks(mine.filter(isTimed), true)}${quickTexts(mine)}</div>
-        <div class="ev-layer half" style="left:calc(70px + (100% - 70px) / 2);width:calc((100% - 70px) / 2)">${evBlocks(yours.filter(isTimed), true)}${quickTexts(yours)}</div>
+        <div class="ev-layer half" style="width:calc((100% - 70px) / 2)">${evBlocks(mine.filter(isTimed), true)}</div>
+        <div class="ev-layer half" style="left:calc(70px + (100% - 70px) / 2);width:calc((100% - 70px) / 2)">${evBlocks(yours.filter(isTimed), true)}</div>
       </div>
     </div>
   </section>`;
 };
-after.split = (fresh) => { if (fresh) $('#tl-scroll').scrollTop = 8.5 * ROW; };
+after.split = (fresh) => { fitBars(app, '.chip.evc, .ev-t'); if (fresh) $('#tl-scroll').scrollTop = 8.5 * ROW; };
 
 /* ---------- ④ 메모: 모아보기 / 나누기 ---------- */
 const whoName = (o) => (o === ME ? me().name : you().name);
