@@ -973,3 +973,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .cell.pmode.has-hol .memo-bar { top: 30px; }
 .cell.pmode.has-hol .cell-photo-wrap { margin-top: 3px; }
 .cell.pmode.has-hol .day-notes { top: 50px; }
+
+/* 기념일 = 맨 위 일정 한 칸 자리 (두 달력 모두), 그 아래에 일정·사진 */
+.hol.hol-top { position: absolute; left: 3px; right: 3px; bottom: auto; margin: 0; height: 16px; line-height: 16px; font-size: .64em; font-weight: 800; text-align: center; }
+.cell.pmode.has-hol .cell-photo-wrap { margin-top: 26px; }
+.cell.pmode.has-hol .day-notes { top: 58px; }
+.cell.pmode.has-hol .memo-bar { top: 32px; }

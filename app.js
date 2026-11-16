@@ -540,14 +540,14 @@ SCREENS.month = () => {
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
     return `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol && S.photoMode ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
+        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
-          ${hol && S.photoMode ? `<span class="hol hol-top">${hol}</span>` : ''}
+          ${hol ? `<span class="hol hol-top" style="top:${BAR_TOP}px">${hol}</span>` : ''}
           ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" /></div>` : ''}
           ${notes.length ? `<div class="day-notes">${notes.slice(0, 3).map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>` : ''}
-          ${hol && !S.photoMode ? `<span class="hol">${hol}</span>` : ''}
+
           ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}" style="left:${Math.round((stk.x ?? 0.5) * 100)}%;top:${Math.round((stk.y ?? 0.78) * 100)}%">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
@@ -555,18 +555,20 @@ SCREENS.month = () => {
   /* 일정 막대: 한 칸에 딱 3개까지 */
   const barsFor = (ws, we) => {
     if (S.photoMode) return '';
+    // 칸마다 몇 번째 줄이 차 있는지 (기념일이 있는 칸은 맨 윗줄이 차 있음)
+    const occ = Array.from({ length: 7 }, (_, k) => { const d = addDays(ws, k); return (d >= firstDate && d <= lastDate && HOLIDAYS(d)) ? [true] : []; });
     const segs = evs.filter((e) => e.start <= we && e.end >= ws)
       .sort((a, b) => a.start.localeCompare(b.start) || diffDays(b.start, b.end) - diffDays(a.start, a.end) || (a.startTime || '').localeCompare(b.startTime || ''));
-    const lanes = []; let out = '';
+    let out = '';
     const firstCol = ws < firstDate ? diffDays(ws, firstDate) : 0;
     const lastCol = we > lastDate ? diffDays(ws, lastDate) : 6;
     segs.forEach((e) => {
       const c0 = diffDays(ws, e.start < ws ? ws : e.start); const c1 = diffDays(ws, e.end > we ? we : e.end);
       const vis0 = Math.max(c0, firstCol), vis1 = Math.min(c1, lastCol);
       if (vis1 < vis0) return;
-      let lane = lanes.findIndex((end) => end < vis0);
-      if (lane === -1) { lane = lanes.length; lanes.push(-1); }
-      lanes[lane] = vis1;
+      let lane = 0;
+      for (;; lane++) { let free = true; for (let k = vis0; k <= vis1; k++) if (occ[k][lane]) { free = false; break; } if (free) break; }
+      for (let k = vis0; k <= vis1; k++) occ[k][lane] = true;
       if (lane >= MAX_LANES) return;
       const contL = e.start < addDays(ws, vis0); const contR = e.end > addDays(ws, vis1);
       out += `<div class="bar ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${BAR_TOP + lane * BAR_STEP}px">${esc(e.title)}</div>`;
