@@ -94,14 +94,22 @@ async function flush() {
   if (!ops.length) return;
   st.synced = now;
   const col = docsCol(c.cid);
-  for (let i = 0; i < ops.length; i += 400) {
+  // 개수(400)와 크기(약 4MB)로 나눠서 보냄 → 사진을 여러 장 한꺼번에 올려도 실패하지 않게
+  const chunks = []; let cur = [], bytes = 0;
+  ops.forEach((o) => { const sz = o[2] ? o[2].length : 100; if (cur.length && (cur.length >= 400 || bytes + sz > 4e6)) { chunks.push(cur); cur = []; bytes = 0; } cur.push(o); bytes += sz; });
+  if (cur.length) chunks.push(cur);
+  for (const part of chunks) {
     const b = fs.batch();
-    ops.slice(i, i + 400).forEach(([t, k, json]) => {
+    part.forEach(([t, k, json]) => {
       if (t === 'set') b.set(col.doc(k), { col: k.split('__')[0], json, by: st.user ? st.user.uid : '', at: firebase.firestore.FieldValue.serverTimestamp() });
       else b.delete(col.doc(k));
     });
     try { await b.commit(); }
-    catch (e) { st.error = e.code || e.message; hooks.toast('동기화에 실패했어요: ' + st.error); }
+    catch (e) {
+      st.error = e.code || e.message;
+      part.forEach(([t, k]) => { if (t === 'set') st.synced.delete(k); }); // 다음에 다시 보내도록
+      hooks.toast(/too large|exceeds|maximum/i.test(e.message || '') ? '사진이 너무 커서 올리지 못했어요' : '동기화에 실패했어요: ' + st.error);
+    }
   }
 }
 

@@ -167,7 +167,11 @@ let db = load();
 if (!db || !db.users) { db = CLOUD ? emptyDb() : seed(); }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch { if (!CLOUD) toast('저장 공간이 부족해요. 사진 메모를 일부 지워주세요.'); }
+  catch {
+    // 휴대폰 저장 공간이 모자라면 큰 원본 사진(src)은 빼고 저장
+    try { localStorage.setItem(KEY, JSON.stringify({ ...db, gallery: db.gallery.map((g) => ({ ...g, src: '' })) })); }
+    catch { if (!CLOUD) toast('저장 공간이 부족해요. 사진을 일부 지워주세요.'); }
+  }
   if (CLOUD && window.nneowCloud) window.nneowCloud.push(db);
 }
 ensureShape(db);
@@ -1388,29 +1392,30 @@ function addMemo(text, image, date, send, replyTo = null, chat = false, color = 
   render();
   if (!chat) toast(send ? `${you().name}에게 메모를 보냈어요` : '메모를 저장했어요');
 }
-function shrinkImage(file, max = 900) {
+async function shrinkImage(file, max = 900) {
+  const draw = (src, w, h) => { const k = Math.min(1, max / Math.max(w, h)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.72); };
+  try { if (window.createImageBitmap) { const bm = await createImageBitmap(file, { imageOrientation: 'from-image' }); const out = draw(bm, bm.width, bm.height); bm.close && bm.close(); return out; } } catch { /* 아래 방식으로 */ }
   return new Promise((res) => {
     const img = new Image(); const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.72));
-    };
-    img.onerror = () => res('');
+    img.onload = () => { try { res(draw(img, img.naturalWidth || img.width, img.naturalHeight || img.height)); } catch { res(''); } URL.revokeObjectURL(url); };
+    img.onerror = () => { URL.revokeObjectURL(url); res(''); };
     img.src = url;
   });
 }
 
 /* ================= 갤러리 사진 (정사각형 + 확대/위치 조정) ================= */
-function pickFile(cb) {
-  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
-  i.onchange = () => i.files[0] && cb(i.files[0]); i.click();
+/* 사진 고르기: 아이폰 Safari는 화면에 붙어 있지 않은 파일 입력을 버릴 수 있어서 잠깐 붙여 둠 (사진 '비공개 접근'이어도 고른 사진은 올라감) */
+function filePicker(multiple, cb) {
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.multiple = multiple;
+  i.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(i);
+  const done = () => setTimeout(() => i.remove(), 1000);
+  i.addEventListener('change', () => { const fs = [...(i.files || [])]; done(); if (fs.length) cb(fs); });
+  i.addEventListener('cancel', done);
+  i.click();
 }
-function pickFiles(cb) {
-  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.multiple = true;
-  i.onchange = () => i.files.length && cb([...i.files]); i.click();
-}
+function pickFile(cb) { filePicker(false, (fs) => cb(fs[0])); }
+function pickFiles(cb) { filePicker(true, cb); }
 /* 정사각형 가운데 자르기 (여러 장 올릴 때) */
 function autoSquare(src, out = 640) {
   return new Promise((res) => {
@@ -1422,8 +1427,8 @@ function autoSquare(src, out = 640) {
 }
 /* 사진 올리기: 한 장이면 확대·위치 조정, 여러 장이면 가운데를 정사각형으로 */
 async function addPhotos(files, date, onCal = false) {
-  files = files.filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || ''));
-  if (!files.length) return;
+  files = files.filter((f) => !f.type || /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(f.name || ''));
+  if (!files.length) { toast('사진 파일이 아니에요'); return; }
   if (files.length === 1) {
     const src = await shrinkImage(files[0], 1080);
     if (!src) { toast('사진을 열 수 없어요'); return; }
@@ -1432,7 +1437,10 @@ async function addPhotos(files, date, onCal = false) {
   }
   toast(`${files.length}장을 준비하는 중…`);
   const items = [];
-  for (const f of files.slice(0, 30)) { const src = await shrinkImage(f, 1080); if (src) items.push({ img: await autoSquare(src), src }); }
+  let failed = 0;
+  for (const f of files.slice(0, 30)) { const src = await shrinkImage(f, 1080); if (src) items.push({ img: await autoSquare(src), src }); else failed++; }
+  if (!items.length) { toast('사진을 열 수 없어요. 다른 사진으로 해볼까요?'); return; }
+  if (failed) toast(`${failed}장은 열 수 없어서 빼고 올려요`);
   photoInfoSheet(items, date, onCal);
 }
 function photoInfoSheet(items, date = todayStr(), onCal = false) {
