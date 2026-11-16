@@ -540,13 +540,14 @@ SCREENS.month = () => {
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
     return `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
+        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol && S.photoMode ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
+          ${hol && S.photoMode ? `<span class="hol hol-top">${hol}</span>` : ''}
           ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" /></div>` : ''}
           ${notes.length ? `<div class="day-notes">${notes.slice(0, 3).map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>` : ''}
-          ${hol ? `<span class="hol">${hol}</span>` : ''}
+          ${hol && !S.photoMode ? `<span class="hol">${hol}</span>` : ''}
           ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}" style="left:${Math.round((stk.x ?? 0.5) * 100)}%;top:${Math.round((stk.y ?? 0.78) * 100)}%">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;

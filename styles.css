@@ -967,3 +967,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .quick-save:active { background: var(--fg); border-color: var(--fg); color: var(--bg); }
 .dp-item { height: 150px; }
 .dp-item img { max-width: 200px; }
+
+/* 사진 캘린더: 날짜 → 기념일 → 사진 */
+.hol.hol-top { position: static; display: block; margin: 6px 2px 0; line-height: 1.2; }
+.cell.pmode.has-hol .memo-bar { top: 30px; }
+.cell.pmode.has-hol .cell-photo-wrap { margin-top: 3px; }
+.cell.pmode.has-hol .day-notes { top: 50px; }
