@@ -146,7 +146,7 @@ function emptyDb() {
       b: { name: '상대', colors: { ...DEFAULT_COLORS, shared: '#ff8fb1' }, font: 'wanted', theme: 'light', fs: 1, allowAccess: false },
     },
     events: [], deadlines: [], memos: [], todos: [], moods: {}, moodLog: [], photos: { a: {}, b: {} }, notifs: [],
-    gallery: [], stickers: [], pokes: [], goals: [], settings: {},
+    gallery: [], stickers: [], pokes: [], goals: [], settings: {}, dayNotes: [],
   };
 }
 function ensureShape(d) {
@@ -258,7 +258,8 @@ function listToday(who) {
     .sort((a, b) => (isTimed(a) ? 1 : 0) - (isTimed(b) ? 1 : 0) || (a.startTime || '').localeCompare(b.startTime || ''));
 }
 function progressOf(who) { const l = listToday(who); const done = l.filter((e) => isDone(e, who)).length; return { total: l.length, done, pct: l.length ? Math.round(done / l.length * 100) : 0 }; }
-const photosOn = (s) => db.gallery.filter((g) => g.date === s && g.onCal).sort((a, b) => b.at - a.at); // 달력에 붙인 사진만
+const photosOn = (s) => db.gallery.filter((g) => g.date === s && g.onCal).sort((a, b) => (a.ord ?? 1e15) - (b.ord ?? 1e15) || b.at - a.at); // 달력에 붙인 사진만, 맨 앞 = 대표
+const MAX_DAY_PHOTOS = 20;
 const stickerOn = (owner, s) => db.stickers.filter((x) => x.to === owner && x.date === s).sort((a, b) => b.at - a.at)[0];
 const hasEventOn = (owner, s) => visibleEvents(owner).some((e) => covers(e, s));
 
@@ -421,16 +422,17 @@ SCREENS.list = () => {
         ${items.length ? items.map((e) => { const done = isDone(e, ME); return `
           <li class="todo ${done ? 'done' : ''} ${e.quick ? 'quick' : ''}" ${e.owner === ME ? `data-lp="todoEdit" data-id="${e.id}"` : ''}>
             ${e.quick
-              ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></button>`
+              ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M5 2.5v21l18-10.5z"/></svg></button>`
               : `<button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>`}
             <span class="txt">${esc(e.title)}</span>
             <span class="todo-when">${isTimed(e) ? `${timeLabel(e.startTime)}${e.endTime ? ` – ${timeLabel(e.endTime)}` : ''}` : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}${e.deadline ? ' <span class="dl-tri"></span>' : ''}</span>
             ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
           </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 누르면 바로 적을 수 있어요</li>')}
-        ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>
+        ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M5 2.5v21l18-10.5z"/></svg></span>
           <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="enter" />
             <div class="qt-row"><label class="qt"><span>시작</span><input name="time" type="time" aria-label="시작 시간" /></label><em>–</em><label class="qt"><span>끝</span><input name="time2" type="time" aria-label="끝 시간" /></label>
-            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인"><span class="dl-tri"></span></button></div></form></li>` : ''}
+            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인"><span class="dl-tri"></span></button>
+            <button type="submit" class="chk quick-save" aria-label="저장">${ICON.check}</button></div></form></li>` : ''}
       </ul>
       <div class="list-space"></div>
     </div>
@@ -446,7 +448,7 @@ SCREENS.weekly = () => {
   const pct = total ? Math.round(done / total * 100) : 0;
   const d0 = parse(ws), d1 = parse(we);
   const thisWeek = ws === weekOf(todayStr());
-  const tri = (on) => `<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>`;
+  const tri = (on) => `<svg viewBox="0 0 24 24"><path d="M5 2.5v21l18-10.5z"/></svg>`;
   return `
   <section class="screen list-screen">
     <div class="list-date week-nav"><button data-act="weekPrev" aria-label="지난주">${ICON.left}</button><span>${d0.getMonth() + 1}월 ${d0.getDate()}일 – ${d1.getMonth() + 1}월 ${d1.getDate()}일${thisWeek ? ' · 이번 주' : ''}</span><button data-act="weekNext" aria-label="다음 주">${ICON.right}</button></div>
@@ -499,6 +501,15 @@ function connBanner() {
   return '';
 }
 
+/* ---------- 기념일 (공휴일 + 기념일) ---------- */
+const HOL_FIXED = { '01-01': '신정', '02-14': '밸런타인', '03-01': '삼일절', '03-14': '화이트데이', '04-05': '식목일', '05-01': '근로자의 날', '05-05': '어린이날', '05-08': '어버이날', '05-15': '스승의 날', '06-06': '현충일', '07-17': '제헌절', '08-15': '광복절', '10-03': '개천절', '10-09': '한글날', '11-11': '빼빼로데이', '12-24': '크리스마스이브', '12-25': '크리스마스' };
+const HOL_LUNAR = { // 음력 공휴일 (설날·부처님오신날·추석)
+  '2025-01-28': '설날 연휴', '2025-01-29': '설날', '2025-01-30': '설날 연휴', '2025-05-05': '부처님오신날', '2025-10-05': '추석 연휴', '2025-10-06': '추석', '2025-10-07': '추석 연휴',
+  '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴', '2026-05-24': '부처님오신날', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴',
+  '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-05-13': '부처님오신날', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
+};
+const HOLIDAYS = (s) => HOL_LUNAR[s] || HOL_FIXED[s.slice(5)] || '';
+
 /* ---------- ② 월 달력 ---------- */
 const BAR_TOP = 37, BAR_STEP = 19, MAX_LANES = 4; // 일정 막대: 4개까지 같은 두께로
 SCREENS.month = () => {
@@ -521,8 +532,10 @@ SCREENS.month = () => {
     const rainy = !out && rainLikely(s);
     const dlEnd = !out && evs.some((x) => x.deadline && x.end === s);
     const phs = S.photoMode && !out ? photosOn(s) : [];
-    const photo = phs.find((g) => g.owner === owner) || phs[0];
-    const subPhoto = photo && photo.owner === owner && phs.find((g) => g.owner === other);
+    const photo = phs[0]; // 대표 사진 (사진 순서에서 맨 앞)
+    const subPhoto = null;
+    const notes = S.photoMode && !out ? db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at) : [];
+    const hol = !out && HOLIDAYS(s);
     const stk = !out && stickerOn(owner, s);
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
@@ -531,7 +544,9 @@ SCREENS.month = () => {
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
-          ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" />${subPhoto ? `<img class="cell-photo-sub" src="${subPhoto.img}" alt="" />` : ''}</div>` : ''}
+          ${photo ? `<div class="cell-photo-wrap"><img class="cell-photo" src="${photo.img}" alt="" /></div>` : ''}
+          ${notes.length ? `<div class="day-notes">${notes.slice(0, 3).map((x) => `<span>${esc(x.text)}</span>`).join('')}</div>` : ''}
+          ${hol ? `<span class="hol">${hol}</span>` : ''}
           ${stk ? `<span class="cell-stk ${photo ? 'on-photo' : ''}" style="left:${Math.round((stk.x ?? 0.5) * 100)}%;top:${Math.round((stk.y ?? 0.78) * 100)}%">${STICKERS[stk.kind] ? STICKERS[stk.kind].svg : ''}</span>` : ''}
           ${dlEnd && !S.photoMode ? '<span class="deadline-tri" title="데드라인"></span>' : ''}
         </div>`;
@@ -757,7 +772,18 @@ function memoListItems() {
   const list = S.memoPrivate
     ? db.memos.filter((m) => m.owner === ME && !m.toPartner)
     : db.memos.filter((m) => m.toPartner && !m.chat); // 나누기에서 나눈 메모는 모아보기에 올리지 않음
-  return list.slice().sort((a, b) => b.createdAt - a.createdAt);
+  return [...list, ...(S.memoPrivate ? [] : eventMemos())].sort((a, b) => b.createdAt - a.createdAt);
+}
+/* 일정에 붙인 메모 (내 일정 메모 + 상대 일정에 남긴 메모 + 상대가 내 일정에 남긴 메모) */
+function eventMemos() {
+  const out = [];
+  db.events.forEach((e) => {
+    const seen = e.owner === ME || e.shared || (e.notes || []).some((n) => n.by === ME);
+    if (!seen) return;
+    if (e.memo && (e.owner === ME || e.shared)) out.push({ id: 'em_' + e.id, evId: e.id, owner: e.owner, text: e.memo, date: e.start, createdAt: e.createdAt || 0, evTitle: e.title });
+    (e.notes || []).forEach((n) => out.push({ id: 'en_' + n.id, evId: e.id, noteId: n.id, owner: n.by, text: n.text, date: e.start, createdAt: n.at, evTitle: e.title }));
+  });
+  return out;
 }
 function memoAllHTML() {
   const list = memoListItems();
@@ -767,13 +793,13 @@ function memoAllHTML() {
   </div>`;
   const empty = `<div class="empty">${S.memoPrivate ? '나만 보는 메모가 없어요' : '나눈 메모가 없어요'}</div>`;
   const body = !list.length ? empty : S.memoView === 'grid'
-    ? `<div class="memo-grid">${list.map((m) => `<button class="mg-item" style="--c:${m.color || db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+    ? `<div class="memo-grid">${list.map((m) => `<button class="mg-item ${m.evId ? 'ev-memo' : ''}" style="--c:${m.color || db.users[m.owner].colors.memo}" data-act="${m.evId ? 'openEvent' : 'openMemo'}" ${m.evId ? '' : 'data-lp="memo"'} data-id="${m.evId || m.id}">
         ${m.image ? `<img src="${m.image}" alt="" />` : `<span class="mg-text">${esc(m.text)}</span>`}
         <span class="mg-who">${esc(whoName(m.owner).slice(0, 1))}</span></button>`).join('')}</div>`
-    : `<div class="memo-list">${list.map((m) => `<div class="ml-wrap" style="--c:${m.color || db.users[m.owner].colors.memo}"><button class="ml-item" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+    : `<div class="memo-list">${list.map((m) => `<div class="ml-wrap" style="--c:${m.color || db.users[m.owner].colors.memo}"><button class="ml-item ${m.evId ? 'ev-memo' : ''}" data-act="${m.evId ? 'openEvent' : 'openMemo'}" ${m.evId ? `data-lp="evMemoDel" data-ev="${m.evId}" data-note="${m.noteId || ''}"` : 'data-lp="memo"'} data-id="${m.evId || m.id}">
         <span class="ml-bar"></span>
         <div class="ml-body"><div class="ml-text">${esc(m.text) || '사진'}</div>
-        <div class="ml-sub">${esc(whoName(m.owner))} · ${m.chat ? '나눈 메모' : fmtDate(m.date)} · ${ago(m.createdAt)}</div></div>
+        <div class="ml-sub">${esc(whoName(m.owner))} · ${m.evId ? `일정 메모 · ${esc(m.evTitle)}` : m.chat ? '나눈 메모' : fmtDate(m.date)} · ${ago(m.createdAt)}</div></div>
         ${m.image ? `<img class="ml-img" src="${m.image}" alt="" />` : ''}</button>
         ${(m.comments || []).length ? `<div class="ml-comments">${commentsHTML(m)}</div>` : ''}</div>`).join('')}</div>`;
   return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:90px"></div></div>
@@ -1415,7 +1441,8 @@ function photoInfoSheet(items, date = todayStr(), onCal = false) {
   actions.phSave = () => {
     const d = $('#ph-date', root).value || date; const cap = $('#ph-cap', root).value.trim();
     const cal = $('#ph-cal', root).classList.contains('on');
-    items.forEach((x, i) => db.gallery.push({ id: uid(), owner: ME, date: d, img: x.img, src: x.src || '', caption: cap, at: Date.now() + i, onCal: cal }));
+    const base = photosOn(d).length;
+    items.forEach((x, i) => db.gallery.push({ id: uid(), owner: ME, date: d, img: x.img, src: x.src || '', caption: cap, at: Date.now() + i, onCal: cal, ...(cal ? { ord: base + i } : {}) }));
     notify('photo', `${me().name}님이 사진 ${items.length > 1 ? items.length + '장을' : '을'} 올렸어요 (${fmtDate(d)})`);
     save(); closeSheet(); render(); toast(`사진을 올렸어요 · ${you().name}에게도 보여요`);
   };
@@ -1500,13 +1527,44 @@ after.photo = () => {
 /* 달력 사진 모드에서 날짜 누르기 */
 function photoDay(s) {
   const list = photosOn(s);
-  const upload = () => pickFiles((files) => addPhotos(files, s, true)); // 달력에서 올리면 달력에 붙음
+  const left = MAX_DAY_PHOTOS - list.length;
+  const upload = () => {
+    if (left <= 0) { toast(`하루에 사진은 ${MAX_DAY_PHOTOS}장까지예요`); return; }
+    pickFiles((files) => { if (files.length > left) toast(`${left}장만 올릴게요 (하루 ${MAX_DAY_PHOTOS}장까지)`); addPhotos(files.slice(0, left), s, true); });
+  };
   if (!list.length) { upload(); return; }
   openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
-    <div class="g-grid sheet-grid">${list.map((g) => `<button class="g-item" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" /><span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span></button>`).join('')}</div>
+    <div class="day-photos" id="day-photos">${list.map((g, i) => `<button class="dp-item ${i === 0 ? 'rep' : ''}" data-act="openPhoto" data-lp="dayPhoto" data-id="${g.id}" data-date="${s}"><img src="${g.src || g.img}" alt="" />${i === 0 ? '<span class="dp-rep">대표</span>' : ''}<span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span></button>`).join('')}</div>
+    <div class="dp-sub">${list.length}/${MAX_DAY_PHOTOS}장 · 사진을 꾹 누르면 순서를 바꾸거나 지울 수 있어요. 맨 앞 사진이 달력에 보여요</div>
     <div class="actions"><button class="btn" data-act="phUpload">사진 올리기</button><button class="btn ghost" data-act="phDay">이 날 일정 보기</button></div>`);
   actions.phUpload = () => { closeSheet(); upload(); };
   actions.phDay = () => { closeSheet(); go('day', { sel: s }); };
+}
+/* 사진 꾹: 대표로 · 앞으로 · 뒤로 · 삭제 */
+function dayPhotoMenu(id, s) {
+  const list = photosOn(s); const i = list.findIndex((g) => g.id === id); const g = list[i]; if (!g) return;
+  openSheet(`<div class="dp-menu-img"><img src="${g.img}" alt="" /></div>
+    <div class="actions col">
+      <button class="btn block" data-act="dpRep" ${i === 0 ? 'disabled' : ''}>대표 사진으로 (맨 앞)</button>
+      <div class="actions" style="margin:0"><button class="btn ghost" data-act="dpMove" data-d="-1" ${i === 0 ? 'disabled' : ''}>← 앞으로</button><button class="btn ghost" data-act="dpMove" data-d="1" ${i === list.length - 1 ? 'disabled' : ''}>뒤로 →</button></div>
+      ${g.owner === ME ? '<button class="btn danger block" data-act="dpDel">삭제</button>' : ''}
+    </div>`, { center: true });
+  const reorder = (arr) => { arr.forEach((x, k) => { x.ord = k; }); save(); closeSheet(); render(); photoDay(s); };
+  actions.dpRep = () => { const arr = list.filter((x) => x.id !== id); arr.unshift(g); reorder(arr); };
+  actions.dpMove = (el) => { const d = +el.dataset.d; const arr = list.slice(); const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; reorder(arr); };
+  actions.dpDel = () => { db.gallery = db.gallery.filter((x) => x.id !== id); save(); closeSheet(); render(); if (photosOn(s).length) photoDay(s); toast('삭제했어요'); };
+}
+/* 사진 캘린더에서 날짜 꾹 → 짧은 말 (사진 위에 일정처럼) */
+function dayNoteSheet(s) {
+  const mine = db.dayNotes.filter((x) => x.date === s);
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)} 한마디</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
+    ${mine.length ? `<div class="dn-list">${mine.map((x) => `<div class="dn-item"><span>${esc(x.text)}</span><em>${esc(whoName(x.owner))}</em>${x.owner === ME ? `<button data-act="dnDel" data-id="${x.id}" aria-label="지우기">${ICON.x}</button>` : ''}</div>`).join('')}</div>` : ''}
+    <div class="field"><input id="dn-text" maxlength="20" placeholder="사진 위에 올릴 짧은 말 (20자)" enterkeyhint="done" /></div>`, { bind: (sh) => setTimeout(() => $('#dn-text', sh).focus(), 250) });
+  actions.dnSave = () => {
+    const t = $('#dn-text', root).value.trim(); if (!t) { closeSheet(); return; }
+    db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t, at: Date.now() }); save(); closeSheet(); render();
+  };
+  actions.dnDel = (el) => { db.dayNotes = db.dayNotes.filter((x) => x.id !== el.dataset.id); save(); closeSheet(); render(); dayNoteSheet(s); };
 }
 /* 휴대폰 갤러리 '공유 → nneow' 로 받은 사진 */
 async function receiveShared() {
@@ -2075,7 +2133,15 @@ function rangeChoice(s) {
 /* ================= 꾹 누르기 ================= */
 const LONG = {
   mood: () => moodPicker(),
+  evMemoDel: (el) => { // 일정 메모 꾹 → 내가 쓴 것만 지우기
+    const e = db.events.find((x) => x.id === el.dataset.ev); if (!e) return; const nid = el.dataset.note;
+    const mine = nid ? (e.notes || []).find((n) => n.id === nid && n.by === ME) : e.owner === ME;
+    if (!mine) { eventDetail(e); return; }
+    confirmSheet('이 일정 메모를 지울까요?', esc(e.title), '지우기', () => { if (nid) e.notes = e.notes.filter((n) => n.id !== nid); else e.memo = ''; save(); render(false, true); }, true);
+  },
+  dayPhoto: (el) => dayPhotoMenu(el.dataset.id, el.dataset.date),
   range: (el) => {
+    if (S.photoMode) { dayNoteSheet(el.dataset.date); return; } // 사진 캘린더: 꾹 → 짧은 말
     if (S.viewPartner) { toast(`${you().name}의 캘린더는 볼 수만 있어요`); return; }
     const d = el.dataset.date;
     if (S.rangeStart && !S.rangeEnd && d !== S.rangeStart) { S.rangeEnd = d; render(); return; } // 두 번째 칸 꾹 → 거기까지 표시 + 메뉴
@@ -2109,7 +2175,7 @@ const LONG = {
   progList: () => { // 상대의 오늘 일 꾹 → 체크리스트 (화면을 꽉 채우지 않는 창)
     const list = listToday(YOU);
     openSheet(`<div class="confirm-text">${esc(you().name)}의 오늘 체크리스트</div>
-      ${list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}">${e.quick ? `<span class="tri ${d ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>` : `<span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span>`}<span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : '<div class="empty">오늘 등록된 일이 없어요</div>'}`, { center: true });
+      ${list.length ? `<ul class="todo-list prog-list">${list.map((e) => { const d = isDone(e, YOU); return `<li class="todo ${d ? 'done' : ''}">${e.quick ? `<span class="tri ${d ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="M5 2.5v21l18-10.5z"/></svg></span>` : `<span class="chk ${d ? 'on' : ''}">${d ? ICON.check : ''}</span>`}<span class="txt">${esc(e.title)}</span><span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : '하루 종일'}</span></li>`; }).join('')}</ul>` : '<div class="empty">오늘 등록된 일이 없어요</div>'}`, { center: true });
   },
   evNote: (el) => {
     const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;

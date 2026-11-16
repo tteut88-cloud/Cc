@@ -933,3 +933,37 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .tri svg { stroke: var(--line-strong); }
 .tri.on svg { stroke: var(--fg); fill: var(--fg); }
 .prog-list { max-height: 50dvh; }
+
+/* ===== v25 ===== */
+/* 사진 캘린더: 날짜 사진 줄 (옆으로) */
+.day-photos { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.day-photos::-webkit-scrollbar { display: none; }
+.dp-item { position: relative; flex: 0 0 auto; height: 180px; border-radius: 12px; overflow: hidden; scroll-snap-align: start; background: var(--soft); }
+.dp-item img { height: 100%; width: auto; max-width: 260px; object-fit: cover; display: block; }
+.dp-item.rep { outline: 2.5px solid var(--fg); outline-offset: -2.5px; }
+.dp-rep { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: var(--fg); color: var(--bg); }
+.dp-item .g-who { left: auto; right: 6px; bottom: 6px; }
+.dp-sub { font-size: .76em; color: var(--muted); margin: 4px 0 2px; }
+.dp-menu-img img { display: block; width: 100%; max-height: 220px; object-fit: contain; border-radius: 12px; margin-bottom: 12px; background: var(--soft); }
+.btn[disabled] { opacity: .35; pointer-events: none; }
+/* 사진 위 짧은 말 */
+.day-notes { position: absolute; left: 3px; right: 3px; top: 40px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; z-index: 1; }
+.day-notes span { font-size: .62em; font-weight: 700; line-height: 15px; height: 15px; padding: 0 3px; border-radius: 4px; color: var(--fg); background: color-mix(in srgb, var(--bg) 72%, transparent); white-space: nowrap; overflow: hidden; text-align: center; }
+.dn-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.dn-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--soft); }
+.dn-item span { flex: 1; font-weight: 600; }
+.dn-item em { font-style: normal; font-size: .76em; color: var(--muted); }
+.dn-item button { width: 26px; height: 26px; display: grid; place-items: center; color: var(--muted); }
+.dn-item .ico { width: 15px; height: 15px; }
+/* 기념일: 테마 글자색 */
+.hol { position: absolute; left: 2px; right: 2px; bottom: 3px; font-size: .58em; font-weight: 700; color: var(--fg); text-align: center; white-space: nowrap; overflow: hidden; pointer-events: none; }
+/* 일정 메모 표시 */
+.ml-item.ev-memo .ml-bar { background: repeating-linear-gradient(to bottom, var(--c) 0 4px, transparent 4px 7px); }
+/* ① 삼각형 = 체크박스 크기 */
+.tri { width: 26px; height: 26px; }
+.tri svg { width: 26px; height: 26px; }
+.quick-save { width: 34px; height: 34px; border-radius: 8px; margin-left: auto; }
+.quick-save .ico { width: 18px; height: 18px; stroke-width: 3; opacity: .35; }
+.quick-save:active { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.dp-item { height: 150px; }
+.dp-item img { max-width: 200px; }
