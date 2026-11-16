@@ -61,6 +61,7 @@ const ICON = {
 /* 표정 — 같은 선 스타일로 그린 얼굴들. 웃는 표정은 '활짝'만 선택지에 포함 */
 const FACES = {
   smile: { label: '기본', d: '<circle cx="14.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><circle cx="25.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><path d="M13 23.5q7 7 14 0"/>' },
+  wink: { label: '윙크', d: '<circle cx="14.5" cy="16.5" r="2" fill="currentColor" stroke="none"/><path d="M22.5 17q3-2.6 6 0"/><path d="M13 23.5q7 7 14 0"/>' },
   grin: { label: '활짝', d: '<path d="M11.5 17.5q3-4 6 0M22.5 17.5q3-4 6 0"/><path d="M12 22h16q-1 9-8 9t-8-9z"/>' },
   love: { label: '사랑', d: '<path d="M14.5 19.5s-4-2.4-4-5.2a2 2 0 0 1 4-.9 2 2 0 0 1 4 .9c0 2.8-4 5.2-4 5.2zM25.5 19.5s-4-2.4-4-5.2a2 2 0 0 1 4-.9 2 2 0 0 1 4 .9c0 2.8-4 5.2-4 5.2z" fill="#ff5f93" stroke="#ff5f93" stroke-width="1"/><circle cx="20" cy="26.5" r="2.3"/>' },
   flutter: { label: '설렘', d: '<circle cx="14.5" cy="17" r="2" fill="currentColor" stroke="none"/><circle cx="25.5" cy="17" r="2" fill="currentColor" stroke="none"/><path d="M17.5 25.5h5"/><ellipse cx="11.5" cy="22.5" rx="2.6" ry="1.6" fill="#ff8fb1" stroke="none" opacity=".8"/><ellipse cx="28.5" cy="22.5" rx="2.6" ry="1.6" fill="#ff8fb1" stroke="none" opacity=".8"/>' },
@@ -81,7 +82,7 @@ const STICKERS = {
   star: { label: '별', svg: '<svg class="stk" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9z" fill="#ffd23f" stroke="#e7b500" stroke-width="1.2" stroke-linejoin="round"/><circle cx="9.6" cy="10" r="1" fill="#fff" opacity=".8"/></svg>' },
   clover: { label: '네잎클로버', svg: '<svg class="stk" viewBox="0 0 24 24"><g fill="#55c271" stroke="#2f9a4d" stroke-width="1" stroke-linejoin="round"><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(0 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(90 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(180 12 12)"/><path d="M12 11.5C9 11.5 6 10 6 7.3 6 5.6 7.4 4.5 8.8 4.9 10 5.2 10.6 6 12 7.2 13.4 6 14 5.2 15.2 4.9 16.6 4.5 18 5.6 18 7.3 18 10 15 11.5 12 11.5z" transform="rotate(270 12 12)"/></g><circle cx="12" cy="12" r="1.3" fill="#2f9a4d"/></svg>' },
 };
-const catFace = () => '<svg class="face cat-face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8 L7.5 -1.5 L15.5 3.6 A17 17 0 0 1 24.5 3.6 L32.5 -1.5 L32 8 A17 17 0 1 1 8 8 Z"/></svg>';
+const catFace = () => '<svg class="face cat-face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8 L7.5 -1.5 L15.5 3.6 A17 17 0 0 1 24.5 3.6 L32.5 -1.5 L32 8 A17 17 0 1 1 8 8 Z"/><path d="M17.6 20.6h4.8L20 23.6z" fill="currentColor" stroke-width="1.4"/></svg>';
 const face = (k) => `<svg class="face" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/>${(FACES[k] || FACES.smile).d}</svg>`;
 
 /* ================= 저장소 ================= */
@@ -403,23 +404,39 @@ SCREENS.list = () => {
     <div class="list-date">${fmtFull(t)}</div>
     <div class="list-title-row">
       <button class="list-title" data-act="toMonth">LIST</button>
-      <span class="wx-dot ${wet ? 'wet' : ''}" title="${wet ? '비/눈' : ''}"></span>
       <span class="wx ${wet ? 'wet' : ''}">${cur ? `${wxIcon(cur.code)} ${cur.temp}°C` : `${ICON.cloud} --°C`}</span>
     </div>
     ${connBanner()}
-    <div class="scroll">
+    <div class="scroll" id="list-scroll">
       <ul class="todo-list">
         ${items.length ? items.map((e) => { const done = isDone(e, ME); return `
-          <li class="todo ${done ? 'done' : ''}">
-            <button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>
+          <li class="todo ${done ? 'done' : ''} ${e.quick ? 'quick' : ''}">
+            ${e.quick
+              ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></button>`
+              : `<button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>`}
             <span class="txt">${esc(e.title)}</span>
             <span class="todo-when">${isTimed(e) ? timeLabel(e.startTime) : e.start !== e.end ? `${parse(e.start).getDate()}–${parse(e.end).getDate()}일` : '하루 종일'}</span>
             ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
-          </li>`; }).join('') : '<li class="empty">오늘은 일정이 없어요<br/>달력에서 일정을 추가하면 여기에 떠요</li>'}
+          </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 두 번 누르면 바로 추가할 수 있어요</li>')}
+        ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>
+          <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="done" /></form></li>` : ''}
       </ul>
-      <div class="list-hint">LIST를 누르면 달력으로 넘어가요</div>
+      <div class="list-space"></div>
     </div>
   </section>`;
+};
+
+after.list = () => {
+  // 빈 곳을 두 번 누르면 오늘 일정 바로 추가
+  const sc = $('#list-scroll'); let last = 0, lx = 0, ly = 0;
+  sc.addEventListener('pointerup', (e) => {
+    if (e.target.closest('.todo:not(.empty), button, input, form')) return;
+    const now = Date.now();
+    if (now - last < 380 && Math.hypot(e.clientX - lx, e.clientY - ly) < 30) { last = 0; S.quickAdd = true; render(false, true); const i = $('#quick-input'); if (i) i.focus(); return; }
+    last = now; lx = e.clientX; ly = e.clientY;
+  });
+  const i = $('#quick-input');
+  if (i) { i.focus(); i.addEventListener('blur', () => setTimeout(() => { if (S.quickAdd && !i.value.trim()) { S.quickAdd = false; render(); } }, 150)); }
 };
 
 /* 연결이 끊겼거나, 홈 화면 앱에서 아직 로그인하지 않았을 때 안내 */
@@ -431,6 +448,7 @@ function connBanner() {
 }
 
 /* ---------- ② 월 달력 ---------- */
+const BAR_TOP = 47, BAR_STEP = 19; // 일정 막대: 3개까지 같은 두께로
 SCREENS.month = () => {
   const { y, m } = S.month;
   const first = new Date(y, m, 1);
@@ -487,9 +505,10 @@ SCREENS.month = () => {
         const vis1 = Math.min(c1, lastCol);
         if (vis1 < vis0) return;
         const contL = e.start < addDays(ws, vis0); const contR = e.end > addDays(ws, vis1);
-        bars += `<div class="bar ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${47 + lane * 21}px">${esc(e.title)}</div>`;
+        const long = diffDays(e.start, e.end) >= 2; // 3일 이상 = 메모처럼 같은 색 선
+        bars += `<div class="bar ${long ? 'line' : ''} ${contL ? 'cont-l' : ''} ${contR ? 'cont-r' : ''}" style="--c:${colorOf(e)};left:calc(${vis0} * 100% / 7 + 3px);width:calc(${vis1 - vis0 + 1} * 100% / 7 - 6px);top:${BAR_TOP + lane * BAR_STEP}px">${long && contL ? '' : esc(e.title)}</div>`;
       });
-      Object.entries(extra).forEach(([c, n]) => { bars += `<div class="bar more" style="left:calc(${c} * 100% / 7);width:calc(100% / 7);top:${47 + 3 * 21}px">+${n}</div>`; });
+      Object.entries(extra).forEach(([c, n]) => { bars += `<div class="bar-more" style="left:calc(${+c + 1} * 100% / 7 - 22px)">+${n}</div>`; });
     }
     html += `<div class="week">${cells}<div class="bars">${bars}</div></div>`;
   }
@@ -498,7 +517,7 @@ SCREENS.month = () => {
   return `
   <section class="screen">
     <header class="month-head">
-      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? catFace() : face(curFace)}</button>
+      <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? catFace() : face(S.flashFace || (S.photoMode ? 'wink' : curFace))}</button>
       <button class="icon-btn" data-act="prevMonth" aria-label="이전 달">${ICON.left}</button>
       <button class="month-title" data-act="pickMonth">${y}년 ${m + 1}월</button>
       <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button>
@@ -545,6 +564,21 @@ function stripHTML() {
   }
   return `<div class="strip" id="strip">${s}</div>`;
 }
+/* 날짜 제목 + 그날 메모가 있으면 메모 색 줄 (누르면 메모 보기) */
+function dateTitle(s, nav) {
+  const ms = memosOn(s);
+  const col = ms.length ? (ms.find((x) => x.owner === ME) || ms[0]).color || db.users[(ms.find((x) => x.owner === ME) || ms[0]).owner].colors.memo : '';
+  const t = `<span class="dt-text">${fmtDate(s)}</span>${col ? `<span class="dt-line" style="--c:${col}"></span>` : ''}`;
+  const inner = col ? `<button class="dt-btn" data-act="dayMemos" data-date="${s}">${t}</button>` : `<span class="dt-btn">${t}</span>`;
+  return nav ? `<span class="dt-nav"><button data-act="splitPrev" aria-label="전날">${ICON.left}</button>${inner}<button data-act="splitNext" aria-label="다음날">${ICON.right}</button></span>` : inner;
+}
+function dayMemosSheet(s) {
+  const ms = memosOn(s);
+  openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)} 메모</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    ${ms.map((m) => `<button class="ml-item" style="--c:${m.color || db.users[m.owner].colors.memo};width:100%;margin-bottom:8px" data-act="openMemo" data-id="${m.id}"><span class="ml-bar"></span>
+      <div class="ml-body"><div class="ml-text">${esc(m.text) || '사진'}</div><div class="ml-sub">${esc(whoName(m.owner))} · ${ago(m.createdAt)}</div></div>${m.image ? `<img class="ml-img" src="${m.image}" alt="" />` : ''}</button>`).join('') || '<div class="empty">메모가 없어요</div>'}`);
+}
+
 /* 겹치는 일정을 나란히 배치 */
 function layoutTimed(list) {
   const items = list.map((e) => ({ e, s: toMin(e.startTime), f: Math.max(toMin(e.endTime || e.startTime), toMin(e.startTime) + 30) }))
@@ -559,13 +593,13 @@ function layoutTimed(list) {
   if (group.length) flush();
   return out;
 }
-function evBlocks(list) {
+function evBlocks(list, narrow) {
   return layoutTimed(list).map((g) => {
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
     const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
     return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
       ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
-      <small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>
+      ${narrow ? '' : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
     </button>`;
   }).join('');
 }
@@ -579,7 +613,7 @@ SCREENS.day = () => {
   for (let h = 0; h < 24; h++) hours += `<div class="hour"><div class="lbl">${hourLabel(h)}</div><div class="slot" data-act="slot" data-hour="${h}"></div></div>`;
   return `
   <section class="screen">
-    ${topbar(fmtDate(S.sel), `<button class="icon-btn" data-act="newEvent" aria-label="일정 추가">${ICON.plus}</button>`)}
+    ${topbar(dateTitle(S.sel), `<button class="icon-btn" data-act="newEvent" aria-label="일정 추가">${ICON.plus}</button>`)}
     ${stripHTML()}
     ${allday.length || dls.length || stkDay ? `<div class="allday">
       ${stkDay ? `<button class="chip stk-chip" data-act="openSticker" data-id="${stkDay.id}">${STICKERS[stkDay.kind] ? STICKERS[stkDay.kind].svg : ''} ${esc(db.users[stkDay.from].name)}의 스티커</button>` : ''}
@@ -596,7 +630,7 @@ SCREENS.day = () => {
 };
 after.day = (fresh) => {
   const st = $('#sd-' + S.sel); const strip = $('#strip');
-  if (st && strip) strip.scrollLeft = st.offsetLeft - 8;
+  if (st && strip) strip.scrollLeft = st.offsetLeft;
   if (fresh) {
     const sc = $('#tl-scroll');
     const timed = visibleEvents().filter((e) => covers(e, S.sel) && isTimed(e));
@@ -616,17 +650,14 @@ SCREENS.split = () => {
   const adMine = ad(mine), adYours = ad(yours);
   return `
   <section class="screen">
-    ${topbar('함께 보는 일정')}
-    <div class="day-nav">
-      <button data-act="splitPrev">${ICON.left}</button><span>${fmtDate(S.sel)}</span><button data-act="splitNext">${ICON.right}</button>
-    </div>
+    ${topbar(dateTitle(S.sel, true))}
     <div class="split-head"><span></span><span>내 일정</span><span class="you">${esc(you().name)} 일정</span></div>
     ${adMine || adYours ? `<div class="split-head"><span></span><span class="allday" style="border:0">${adMine}</span><span class="allday" style="border:0">${adYours}</span></div>` : ''}
     <div class="scroll" id="tl-scroll">
       <div class="timeline">
         ${hours}
-        <div class="ev-layer half" style="width:calc((100% - 70px) / 2)">${evBlocks(mine.filter(isTimed))}</div>
-        <div class="ev-layer half" style="left:calc(70px + (100% - 70px) / 2);width:calc((100% - 70px) / 2)">${evBlocks(yours.filter(isTimed))}</div>
+        <div class="ev-layer half" style="width:calc((100% - 70px) / 2)">${evBlocks(mine.filter(isTimed), true)}</div>
+        <div class="ev-layer half" style="left:calc(70px + (100% - 70px) / 2);width:calc((100% - 70px) / 2)">${evBlocks(yours.filter(isTimed), true)}</div>
       </div>
     </div>
   </section>`;
@@ -655,25 +686,26 @@ function memoAllHTML() {
   </div>`;
   const empty = `<div class="empty">${S.memoPrivate ? '나만 보는 메모가 없어요' : '나눈 메모가 없어요'}</div>`;
   const body = !list.length ? empty : S.memoView === 'grid'
-    ? `<div class="memo-grid">${list.map((m) => `<button class="mg-item" style="--c:${db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+    ? `<div class="memo-grid">${list.map((m) => `<button class="mg-item" style="--c:${m.color || db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
         ${m.image ? `<img src="${m.image}" alt="" />` : `<span class="mg-text">${esc(m.text)}</span>`}
         <span class="mg-who">${esc(whoName(m.owner).slice(0, 1))}</span></button>`).join('')}</div>`
-    : `<div class="memo-list">${list.map((m) => `<button class="ml-item" style="--c:${db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
+    : `<div class="memo-list">${list.map((m) => `<button class="ml-item" style="--c:${m.color || db.users[m.owner].colors.memo}" data-act="openMemo" data-lp="memo" data-id="${m.id}">
         <span class="ml-bar"></span>
         <div class="ml-body"><div class="ml-text">${esc(m.text) || '사진'}</div>
-        <div class="ml-sub">${esc(whoName(m.owner))} · ${m.chat ? clockLabel(m.createdAt) : fmtDate(m.date) + ' 메모'} · ${ago(m.createdAt)}</div></div>
+        <div class="ml-sub">${esc(whoName(m.owner))} · ${m.chat ? '나눈 메모' : fmtDate(m.date)} · ${ago(m.createdAt)}${(m.comments || []).length ? ` · 댓글 ${(m.comments || []).length}` : ''}</div></div>
         ${m.image ? `<img class="ml-img" src="${m.image}" alt="" />` : ''}</button>`).join('')}</div>`;
   return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:90px"></div></div>
     <button class="fab" data-act="composeMemo" aria-label="메모 쓰기">${ICON.plus}</button>`;
 }
 function memoPadHTML() {
-  const list = db.memos.filter((m) => m.toPartner).slice().sort((a, b) => a.createdAt - b.createdAt);
+  const list = db.memos.filter((m) => m.chat).slice().sort((a, b) => a.createdAt - b.createdAt); // 나누기 = 대화만
+  const notice = db.memos.filter((m) => m.chat && m.pinnedAt).sort((a, b) => b.pinnedAt - a.pinnedAt)[0];
   let lastDay = '';
   const rows = list.map((m) => {
     const mine = m.owner === ME; const day = ymd(new Date(m.createdAt));
     const sep = day !== lastDay ? `<div class="pad-date">${fmtDate(day)}</div>` : ''; lastDay = day;
-    return `${sep}<div class="pad-row ${mine ? 'me' : 'you'}" data-lp="memo" data-kind="memo" data-id="${m.id}">
-      <div class="pad-meta">${esc(whoName(m.owner))} · ${clockLabel(m.createdAt)}${m.chat ? '' : ` · ${fmtDate(m.date)} 메모`}</div>
+    return `${sep}<div class="pad-row ${mine ? 'me' : 'you'} ${m.pinnedAt ? 'pinned' : ''}" data-lp="memo" data-kind="memo" data-id="${m.id}" id="pr-${m.id}">
+      <div class="pad-meta">${m.pinnedAt ? '📌 ' : ''}${esc(whoName(m.owner))} · ${clockLabel(m.createdAt)}</div>
       ${quoteHTML(m.replyTo)}
       ${m.image ? `<img class="pad-img" src="${m.image}" alt="" />` : ''}
       ${m.text ? `<div class="pad-text">${esc(m.text)}</div>` : ''}
@@ -681,7 +713,8 @@ function memoPadHTML() {
     </div>`;
   }).join('');
   const rm = S.replyTo && db.memos.find((x) => x.id === S.replyTo.id);
-  return `<div class="scroll pad" id="pad-scroll">${rows || '<div class="empty">메모를 주고받아 보세요</div>'}</div>
+  return `${notice ? `<div class="notice-bar"><button class="nb-body" data-act="gotoNotice" data-id="${notice.id}"><b>📌 공지</b><span>${esc(notice.text || '사진')}</span></button><button class="nb-x" data-act="unpin" data-id="${notice.id}" aria-label="공지 내리기">${ICON.x}</button></div>` : ''}
+    <div class="scroll pad" id="pad-scroll">${rows || '<div class="empty">메모를 주고받아 보세요<br/>중요한 메모는 꾹 눌러 공지로 올릴 수 있어요</div>'}</div>
     <div class="pad-bottom">
       ${rm ? `<div class="kk-replybar"><div><b>${esc(whoName(rm.owner))}에게 답장</b><span>${esc(rm.text || '사진')}</span></div><button data-act="cancelReply" aria-label="답장 취소">${ICON.x}</button></div>` : ''}
       ${S.memoImg ? `<div class="pad-attach"><img src="${S.memoImg}" alt="" /><button data-act="padImgRm" aria-label="사진 빼기">${ICON.x}</button></div>` : ''}
@@ -729,22 +762,55 @@ after.memo = () => {
 };
 let swallowClick = false;
 
-/* 메모 크게 보기 (메모장 화면) */
+/* 메모 크게 보기 (무지 메모장) — 내 메모는 바로 고치고 ✓로 저장 */
 SCREENS.memoView = () => {
   const m = db.memos.find((x) => x.id === S.memoId);
   if (!m) return `<section class="screen">${topbar('메모')}<div class="empty">메모가 없어요</div></section>`;
   const mine = m.owner === ME;
+  const col = m.color || db.users[m.owner].colors.memo;
   return `<section class="screen">
-    ${topbar(m.chat ? '나눈 메모' : fmtDate(m.date), mine ? '<button class="poke-btn" data-act="memoViewEdit">수정</button>' : '')}
-    <div class="scroll pad memo-view">
-      <div class="mv-meta">${esc(whoName(m.owner))} · ${fmtDate(ymd(new Date(m.createdAt)))} ${clockLabel(m.createdAt)}${!m.toPartner ? ' · 나만 보기' : ''}${m.editedAt ? ' · 수정됨' : ''}</div>
+    ${topbar('메모', mine ? `<button class="icon-btn" data-act="memoViewSave" aria-label="저장">${ICON.check}</button>` : '')}
+    <div class="scroll memo-view" style="--c:${col}">
+      <div class="mv-meta">${esc(whoName(m.owner))} · ${m.chat ? '' : fmtDate(m.date) + ' · '}${clockLabel(m.createdAt)}${!m.toPartner ? ' · 나만 보기' : ''}${m.editedAt ? ' · 수정됨' : ''}</div>
       ${quoteHTML(m.replyTo)}
       ${m.image ? `<img class="mv-img" src="${m.image}" alt="" />` : ''}
-      ${m.text ? `<div class="mv-text ${mine ? 'me' : 'you'}">${esc(m.text)}</div>` : ''}
-      ${mine ? '<button class="btn danger block" data-act="memoViewDelete" style="margin-top:30px">메모 삭제</button>' : ''}
+      ${mine ? `<textarea id="mv-edit" class="mv-text me" placeholder="메모를 눌러 고칠 수 있어요">${esc(m.text)}</textarea>` : `<div class="mv-text you">${esc(m.text)}</div>`}
+      ${(m.comments || []).length ? `<div class="mv-comments">${m.comments.map((c) => `<div class="mv-c"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('')}</div>` : ''}
     </div>
   </section>`;
 };
+after.memoView = () => {
+  const t = $('#mv-edit'); if (!t) return;
+  const fit = () => { t.style.height = 'auto'; t.style.height = Math.max(160, t.scrollHeight) + 'px'; };
+  fit(); t.addEventListener('input', fit);
+};
+function commentSheet(m) {
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>댓글 달기</h3><button class="icon-btn" data-act="cmtSave">${ICON.check}</button></div>
+    <div class="detail-memo">${esc((m.text || '사진').slice(0, 80))}</div>
+    <div class="field"><textarea id="cmt-text" rows="3" placeholder="${esc(you().name)}의 메모에 댓글을 남겨요"></textarea></div>`, { bind: (sh) => setTimeout(() => $('#cmt-text', sh).focus(), 250) });
+  actions.cmtSave = () => {
+    const t = $('#cmt-text', root).value.trim(); if (!t) { toast('댓글을 입력해 주세요'); return; }
+    m.comments = [...(m.comments || []), { id: uid(), by: ME, text: t, at: Date.now() }];
+    notify('memo', `${me().name}님이 메모에 댓글을 달았어요: ${t}`);
+    save(); closeSheet(); render(false, true); toast('댓글을 달았어요');
+  };
+}
+/* 나누기에서 꾹: 공지 / 수정 / 삭제 */
+function padMenu(m) {
+  const mine = m.owner === ME;
+  openSheet(`<div class="confirm-text">${mine ? '내 메모' : esc(you().name) + '의 메모'}</div><div class="confirm-sub">${esc((m.text || '사진').slice(0, 40))}</div>
+    <div class="actions col">
+      <button class="btn block" data-act="pinMemo">${m.pinnedAt ? '공지 내리기' : '📌 공지로 올리기'}</button>
+      ${mine ? '<div class="actions" style="margin:0"><button class="btn ghost" data-act="memoEditOpen">수정</button><button class="btn danger" data-act="memoDelete">삭제</button></div>' : ''}
+    </div>`, { center: true });
+  actions.pinMemo = () => {
+    m.pinnedAt = m.pinnedAt ? null : Date.now();
+    if (m.pinnedAt) notify('memo', `${me().name}님이 공지를 올렸어요: ${m.text || '사진'}`);
+    save(); closeSheet(); render(false, true);
+  };
+  actions.memoEditOpen = () => { closeSheet(); memoCompose({ memo: m }); };
+  actions.memoDelete = () => { closeSheet(); db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(false, true); toast('삭제했어요'); };
+}
 
 /* 메모 크게 보기 (시트) */
 function memoDetail(m) {
@@ -1101,6 +1167,8 @@ function memoCompose(opts = {}) {
   const m = opts.memo || null;
   let image = m ? m.image : '';
   const date = m ? m.date : (opts.date || todayStr());
+  let pickedColor = (m && m.color) || me().colors.memo;
+  const colors = MEMO_COLORS.includes(pickedColor) ? MEMO_COLORS : [pickedColor, ...MEMO_COLORS];
   const draw = (sh) => {
     $('#m-photo', sh).innerHTML = image
       ? `<img src="${image}" alt="" /><button class="rm" type="button" id="m-rm">${ICON.x}</button>`
@@ -1112,6 +1180,7 @@ function memoCompose(opts = {}) {
     <div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${m ? '메모 수정' : '메모'}</h3><button class="icon-btn" data-act="saveMemo">${ICON.check}</button></div>
     ${m && m.chat ? '' : `<div class="date-row"><span>날짜</span><input type="date" id="m-date" class="date-pill" value="${date}" /></div>`}
     <div class="field"><textarea id="m-text" class="memo-big-input" placeholder="메모를 남겨보세요">${esc(m ? m.text : (opts.text || ''))}</textarea></div>
+    ${m && m.chat ? '' : `<div class="date-row"><span>메모지 색</span><div class="memo-colors" id="m-colors">${colors.map((c) => `<button type="button" data-c="${c}" style="--c:${c}" class="${c === pickedColor ? 'on' : ''}" aria-label="${c}"></button>`).join('')}</div></div>`}
     <div class="switch-row">상대방에게 보내기<button class="switch ${(m ? m.toPartner : S.memoSend) ? 'on' : ''}" id="m-send"></button></div>
     <button type="button" class="memo-photo" id="m-photo"></button>
     <input type="file" accept="image/*" id="m-file" hidden />
@@ -1121,6 +1190,7 @@ function memoCompose(opts = {}) {
       $('#m-photo', sh).onclick = () => $('#m-file', sh).click();
       $('#m-file', sh).onchange = async (ev) => { const f = ev.target.files[0]; if (f) { image = await shrinkImage(f); draw(sh); } };
       $('#m-send', sh).onclick = (ev) => ev.currentTarget.classList.toggle('on');
+      $$('#m-colors button', sh).forEach((b) => { b.onclick = () => { pickedColor = b.dataset.c; $$('#m-colors button', sh).forEach((x) => x.classList.toggle('on', x === b)); }; });
     },
   });
   actions.saveMemo = () => {
@@ -1130,14 +1200,15 @@ function memoCompose(opts = {}) {
     const d = ($('#m-date', root) || {}).value || date;
     if (m) {
       const was = m.toPartner;
-      Object.assign(m, { text: t, image, date: d, toPartner: send, editedAt: Date.now() });
+      Object.assign(m, { text: t, image, date: d, toPartner: send, editedAt: Date.now(), color: m.chat ? m.color : pickedColor });
       if (send && !was) notify('memo', `${me().name}님이 메모를 보냈어요: ${t || '사진'}`);
       save(); closeSheet(); render(false, true); toast('메모를 고쳤어요');
-    } else { closeSheet(); addMemo(t, image, d, send); }
+    } else { closeSheet(); addMemo(t, image, d, send, null, false, pickedColor); }
   };
 }
-function addMemo(text, image, date, send, replyTo = null, chat = false) {
-  db.memos.push({ id: uid(), owner: ME, date, text, image, toPartner: send, createdAt: Date.now(), replyTo, chat });
+const MEMO_COLORS = ['#6dbb6d', '#ffd66b', '#ff9fb5', '#8ec5ff', '#c3a6ff', '#ffb47a'];
+function addMemo(text, image, date, send, replyTo = null, chat = false, color = '') {
+  db.memos.push({ id: uid(), owner: ME, date, text, image, toPartner: send, createdAt: Date.now(), replyTo, chat, ...(color ? { color } : {}) });
   if (send) notify('memo', chat ? `${me().name}: ${text || '사진'}` : `${me().name}님이 메모를 보냈어요: ${text || '사진'}`);
   save();
   render();
@@ -1558,14 +1629,7 @@ const actions = {
       placeSticker(s, { x: cl((e.clientX - r.left) / r.width), y: cl((e.clientY - r.top) / r.height) }); return;
     }
     if (S.photoMode && !S.rangeStart) { photoDay(s); return; }
-    if (S.rangeStart) {
-      const a = S.rangeStart; S.rangeStart = null;
-      if (s === a) { render(); toast('기간 선택을 취소했어요'); return; }
-      if (S.viewPartner) { render(); return; }
-      render();
-      eventSheet({ start: s < a ? s : a, end: s < a ? a : s, allDay: true });
-      return;
-    }
+    if (S.rangeStart) { rangeChoice(s); return; }
     go('day', { sel: s });
   },
 
@@ -1596,9 +1660,15 @@ const actions = {
   memoPrivate: () => { S.memoPrivate = !S.memoPrivate; render(); },
   memoView: (el) => { S.memoView = el.dataset.v; render(); },
   openMemo: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) go('memoView', { memoId: m.id }); },
-  memoViewEdit: () => { const m = db.memos.find((x) => x.id === S.memoId); if (m) memoCompose({ memo: m }); },
-  memoViewDelete: () => { const m = db.memos.find((x) => x.id === S.memoId); if (!m) return;
-    confirmSheet('이 메모를 삭제할까요?', '', '삭제', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); back(); }, true); },
+  memoViewSave: () => {
+    const m = db.memos.find((x) => x.id === S.memoId); const t = $('#mv-edit'); if (!m || !t) return;
+    const v = t.value.trim(); if (!v && !m.image) { toast('메모를 입력해 주세요'); return; }
+    if (v !== m.text) { m.text = v; m.editedAt = Date.now(); save(); }
+    toast('저장했어요'); back();
+  },
+  dayMemos: (el) => dayMemosSheet(el.dataset.date),
+  gotoNotice: (el) => { const r = $('#pr-' + el.dataset.id); if (r) { r.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.classList.add('flash'); setTimeout(() => r.classList.remove('flash'), 1200); } },
+  unpin: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) { m.pinnedAt = null; save(); render(false, true); } },
   padImage: () => pickFile(async (f) => { S.memoImg = await shrinkImage(f); render(false, true); }),
   padImgRm: () => { S.memoImg = ''; render(false, true); },
 
@@ -1669,7 +1739,7 @@ function moodPicker() {
   const mine = db.moods[ME];
   openSheet(`<div class="sheet-head"><span></span><h3>오늘의 표정</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
     <div class="confirm-sub" style="margin-top:-6px">고른 표정이 ${esc(you().name)}에게 알림으로 전송돼요</div>
-    <div class="face-grid">${Object.entries(STICKERS).map(([k, v]) => `<button data-act="stickerPick" data-k="${k}" class="stk-btn">${v.svg}${v.label}</button>`).join('')}${Object.entries(FACES).filter(([k]) => k !== 'smile').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>
+    <div class="face-grid">${Object.entries(STICKERS).map(([k, v]) => `<button data-act="stickerPick" data-k="${k}" class="stk-btn">${v.svg}${v.label}</button>`).join('')}${Object.entries(FACES).filter(([k]) => k !== 'smile' && k !== 'wink').map(([k, v]) => `<button data-act="moodPick" data-k="${k}" class="${mine && mine.face === k && Date.now() - mine.at < HOUR ? 'on' : ''}">${face(k)}${v.label}</button>`).join('')}</div>
     <p class="note" style="padding:12px 0 0">하트 · 별 · 네잎클로버는 ${esc(you().name)}의 캘린더에 붙이는 스티커예요${you().allowAccess ? '' : ' (상대가 접근을 허용해야 해요)'}</p>`);
   actions.moodPick = (el) => { closeSheet(); sendMood(el.dataset.k); };
 }
@@ -1705,12 +1775,25 @@ function progressSheet() {
     <div class="actions"><button class="btn block" data-act="close">닫기</button></div>`, { center: true });
 }
 
+/* 기간 고른 뒤: 연속 일정 / 데드라인 */
+function rangeChoice(s) {
+  const a = S.rangeStart; S.rangeStart = null;
+  if (s === a) { render(); toast('기간 선택을 취소했어요'); return; }
+  render();
+  const start = s < a ? s : a, end = s < a ? a : s;
+  openSheet(`<div class="confirm-text">${fmtDate(start)} → ${fmtDate(end)}</div><div class="confirm-sub">${diffDays(start, end) + 1}일 동안</div>
+    <div class="actions col"><button class="btn block" data-act="rcEvent">연속된 일정 입력하기</button><button class="btn ghost block" data-act="rcDeadline">◢ 데드라인 입력하기</button></div>`, { center: true });
+  actions.rcEvent = () => { closeSheet(); eventSheet({ start, end, allDay: true }); };
+  actions.rcDeadline = () => { closeSheet(); eventSheet({ start, end, allDay: true, deadline: true }); };
+}
+
 /* ================= 꾹 누르기 ================= */
 const LONG = {
   mood: () => moodPicker(),
   range: (el) => {
     if (S.viewPartner) { toast(`${you().name}의 캘린더는 볼 수만 있어요`); return; }
-    S.rangeStart = el.dataset.date; render(); toast('끝나는 날짜를 눌러주세요');
+    if (S.rangeStart) { rangeChoice(el.dataset.date); return; } // 두 번째 칸 꾹
+    S.rangeStart = el.dataset.date; render(); toast('끝나는 날짜를 꾹 눌러주세요');
   },
   strip: (el) => {
     const d = el.dataset.date;
@@ -1720,8 +1803,9 @@ const LONG = {
   },
   memo: (el) => {
     const m = db.memos.find((x) => x.id === el.dataset.id); if (!m) return;
-    if (m.owner !== ME) { memoDetail(m); return; }
-    memoMenu(m);
+    if (S.screen === 'memo' && S.memoTab === 'share') { padMenu(m); return; } // 나누기: 공지/수정/삭제
+    if (m.owner !== ME) { commentSheet(m); return; } // 모아보기: 상대 메모 → 댓글
+    confirmSheet('이 메모를 삭제할까요?', esc((m.text || '사진').slice(0, 40)), '삭제하기', () => { db.memos = db.memos.filter((x) => x.id !== m.id); save(); render(false, true); toast('삭제했어요'); }, true);
   },
   plus: () => go('list'), // ＋ 꾹 → 화면 ①
   bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨
@@ -1765,6 +1849,15 @@ document.addEventListener('submit', (e) => {
   const f = e.target.closest('[data-form]'); if (!f) return;
   e.preventDefault();
   const kind = f.dataset.form; const input = f.querySelector('input'); const v = input ? input.value.trim() : '';
+  if (kind === 'quickAdd') {
+    if (v) {
+      const t = todayStr();
+      db.events.push({ id: uid(), owner: ME, title: v, type: 'plan', allDay: true, start: t, end: t, startTime: '', endTime: '', shared: false, deadline: false, memo: '', quick: true, createdAt: Date.now() });
+      save();
+    }
+    S.quickAdd = !!v; render(); const i = $('#quick-input'); if (i) i.focus();
+    return;
+  }
   if (kind === 'padSend' && (v || S.memoImg)) {
     const r = S.replyTo; S.replyTo = null; const img = S.memoImg; S.memoImg = '';
     addMemo(v, img, todayStr(), true, r, true);

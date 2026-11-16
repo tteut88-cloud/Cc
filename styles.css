@@ -659,3 +659,59 @@ mark { background: var(--accent-soft); color: inherit; border-radius: 3px; paddi
 .cell.pmode .memo-bar { top: 41px; }
 .cell.pmode .cell-photo-wrap { margin-top: 9px; }
 .warn-box span + span { margin-top: 2px; }
+
+/* ===== v16 ===== */
+/* ① 빠른 추가 (삼각형) */
+.tri { width: 26px; height: 26px; display: grid; place-items: center; flex-shrink: 0; color: var(--fg); }
+.tri svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.tri.on svg { fill: currentColor; }
+.quick-form { flex: 1; }
+.quick-form input { background: transparent; border: 0; border-bottom: 1.5px solid var(--line-strong); border-radius: 0; padding: 6px 2px; font-size: 1.12em; font-weight: 500; }
+.list-space { min-height: 55dvh; }
+
+/* ② 일정 막대: 3개까지 같은 두께, 3일 이상은 같은 색 선 */
+.bar { height: 17px; font-size: .68em; }
+.bar.line { background: none; color: color-mix(in srgb, var(--c) 75%, var(--fg)); justify-content: flex-start; padding: 0 2px 4px; align-items: flex-start; line-height: 1.1; }
+.bar.line::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 4px; border-radius: 2px; background: var(--c); }
+.bar.line.cont-l::after { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.bar.line.cont-r::after { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.bar-more { position: absolute; top: 12px; font-size: 10px; font-weight: 800; color: var(--muted); }
+.bar.more { display: none; }
+
+/* ③ 날짜 줄: 양쪽 여백 같게 */
+.strip { position: relative; gap: 0; padding: 10px 8px 8px; scroll-padding-left: 8px; }
+.sday { flex: 0 0 calc((100% - 16px) / 7); }
+.strip { --w: 100%; }
+
+/* ③ / ⑨ 날짜 제목 + 메모 색 줄 */
+.dt-btn { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; font: inherit; font-weight: 700; }
+.dt-line { width: 100%; min-width: 64px; height: 4px; border-radius: 2px; background: var(--c); }
+.dt-nav { display: inline-flex; align-items: center; gap: 6px; }
+.dt-nav > button:not(.dt-btn) { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; }
+.dt-nav .ico { width: 20px; height: 20px; }
+
+/* ④ 메모: 줄 없는 무지 */
+.pad { background: var(--paper); background-image: none; }
+.pad-row { border-bottom: 0; padding: 10px 0; }
+.pad-row.flash { background: var(--accent-soft); border-radius: 10px; transition: background .3s; }
+.notice-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px 8px 14px; background: var(--soft); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.nb-body { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; text-align: left; font-size: .86em; }
+.nb-body b { flex-shrink: 0; }
+.nb-body span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nb-x { width: 30px; height: 30px; display: grid; place-items: center; color: var(--muted); }
+.nb-x .ico { width: 16px; height: 16px; }
+.memo-view { padding: 22px 22px 40px; background: color-mix(in srgb, var(--c) 10%, var(--bg)); }
+textarea.mv-text { width: 100%; background: transparent; border: 0; border-radius: 0; padding: 0; resize: none; min-height: 160px; font: inherit; font-size: 1.22em; line-height: 1.65; color: var(--fg); }
+.mv-text { line-height: 1.65; }
+.mv-comments { margin-top: 26px; border-top: 1px solid color-mix(in srgb, var(--c) 30%, var(--line)); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.mv-c { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: .9em; }
+.mv-c b { font-weight: 700; }
+.mv-c em { font-style: normal; color: var(--muted); font-size: .8em; margin-left: auto; }
+.memo-colors { display: flex; gap: 8px; }
+.memo-colors button { width: 26px; height: 26px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, #000); }
+.memo-colors button.on { outline: 2.5px solid var(--fg); outline-offset: 2px; }
+.sday { flex: 0 0 calc(100% / 7); } /* 패딩을 뺀 폭의 1/7 → 7칸이 딱 맞고 양쪽 여백이 같음 */
+.strip { padding: 10px 0 8px; scroll-padding-left: 0; }
+.actions.col { flex-direction: column; }
+.actions.col > .btn, .actions.col > .actions { flex: none; width: 100%; }
+.bar-more { top: 3px; }
