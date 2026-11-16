@@ -1537,50 +1537,36 @@ function photoDay(s) {
     pickFiles((files) => { if (files.length > left) toast(`${left}장만 올릴게요 (하루 ${MAX_DAY_PHOTOS}장까지)`); addPhotos(files.slice(0, left), s, true); });
   };
   if (!list.length) { upload(); return; }
+  const title = dayTitle(s);
   openSheet(`<div class="sheet-head"><span></span><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    ${title ? `<div class="dp-title">${esc(title)}</div>` : ''}
     <div class="day-photos" id="day-photos">${list.map((g, i) => `<button class="dp-item ${i === 0 ? 'rep' : ''}" data-act="openPhoto" data-lp="dayPhoto" data-id="${g.id}" data-date="${s}"><img src="${g.src || g.img}" alt="" />${i === 0 ? '<span class="dp-rep">대표</span>' : ''}<span class="g-who ${g.owner === ME ? 'me' : 'you'}">${esc(whoName(g.owner).slice(0, 1))}</span></button>`).join('')}</div>
-    <div class="dp-sub">${list.length}/${MAX_DAY_PHOTOS}장 · 사진을 꾹 누르면 순서를 바꾸거나 지울 수 있어요. 맨 앞 사진이 달력에 보여요</div>
+    <div class="dp-sub">${list.length}/${MAX_DAY_PHOTOS}장</div>
     <div class="actions"><button class="btn" data-act="phUpload">사진 올리기</button><button class="btn ghost" data-act="phDay">이 날 일정 보기</button></div>`);
   actions.phUpload = () => { closeSheet(); upload(); };
   actions.phDay = () => { closeSheet(); go('day', { sel: s }); };
 }
-/* 사진 꾹: 대표로 · 앞으로 · 뒤로 · 삭제 */
+/* 사진 꾹: 대표 사진으로 (맨 앞) */
 function dayPhotoMenu(id, s) {
-  const list = photosOn(s); const i = list.findIndex((g) => g.id === id); const g = list[i]; if (!g) return;
+  const list = photosOn(s); const g = list.find((x) => x.id === id); if (!g) return;
+  if (list[0] === g) { toast('이미 대표 사진이에요'); return; }
   openSheet(`<div class="dp-menu-img"><img src="${g.img}" alt="" /></div>
-    <div class="actions col">
-      <button class="btn block" data-act="dpRep" ${i === 0 ? 'disabled' : ''}>대표 사진으로 (맨 앞)</button>
-      <div class="actions" style="margin:0"><button class="btn ghost" data-act="dpMove" data-d="-1" ${i === 0 ? 'disabled' : ''}>← 앞으로</button><button class="btn ghost" data-act="dpMove" data-d="1" ${i === list.length - 1 ? 'disabled' : ''}>뒤로 →</button></div>
-      ${g.owner === ME ? '<button class="btn danger block" data-act="dpDel">삭제</button>' : ''}
-    </div>`, { center: true });
-  const reorder = (arr) => { arr.forEach((x, k) => { x.ord = k; }); save(); closeSheet(); render(); photoDay(s); };
-  actions.dpRep = () => { const arr = list.filter((x) => x.id !== id); arr.unshift(g); reorder(arr); };
-  actions.dpMove = (el) => { const d = +el.dataset.d; const arr = list.slice(); const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; reorder(arr); };
-  actions.dpDel = () => { db.gallery = db.gallery.filter((x) => x.id !== id); save(); closeSheet(); render(); if (photosOn(s).length) photoDay(s); toast('삭제했어요'); };
+    <div class="actions col"><button class="btn block" data-act="dpRep">대표 사진으로 (맨 앞)</button></div>`, { center: true });
+  actions.dpRep = () => { const arr = [g, ...list.filter((x) => x.id !== id)]; arr.forEach((x, k) => { x.ord = k; }); save(); closeSheet(); render(); photoDay(s); };
 }
-/* 사진 캘린더에서 날짜 꾹 → 사진 제목(짧은 말). 적힌 글자를 누르면 고치기 */
-function dayNoteSheet(s, editId) {
-  const list = db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at);
+/* 사진 캘린더에서 날짜 꾹 → 사진 제목 (한 칸) */
+const dayTitle = (s) => { const l = db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at); return l.length ? l[l.length - 1].text : ''; };
+function dayNoteSheet(s) {
   openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)} 사진 제목</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
-    ${list.length ? `<div class="dn-list">${list.map((x) => x.id === editId
-      ? `<div class="dn-item editing"><input id="dn-edit" maxlength="20" value="${esc(x.text)}" enterkeyhint="done" /><button data-act="dnUpdate" data-id="${x.id}" aria-label="고치기">${ICON.check}</button></div>`
-      : `<div class="dn-item"><button class="dn-text" data-act="dnEdit" data-id="${x.id}">${esc(x.text)}</button><em>${esc(whoName(x.owner))}</em><button data-act="dnDel" data-id="${x.id}" aria-label="지우기">${ICON.x}</button></div>`).join('')}</div>` : ''}
-    ${editId ? '' : `<div class="field"><input id="dn-text" maxlength="20" placeholder="사진 제목 (20자)" enterkeyhint="done" /></div>
-    <p class="note" style="padding:0">맨 마지막에 적은 제목이 사진 위 칸에 보여요. 적힌 글자를 누르면 고칠 수 있어요.</p>`}`,
-  { bind: (sh) => setTimeout(() => { const i = $('#dn-edit', sh) || $('#dn-text', sh); if (i) { i.focus(); i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); (editId ? actions.dnUpdate({ dataset: { id: editId } }) : actions.dnSave()); } }); } }, 250) });
+    <div class="field"><input id="dn-text" maxlength="20" value="${esc(dayTitle(s))}" placeholder="사진 제목" enterkeyhint="done" /></div>`,
+  { bind: (sh) => setTimeout(() => { const i = $('#dn-text', sh); if (!i) return; i.focus(); i.setSelectionRange(i.value.length, i.value.length);
+    i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); actions.dnSave(); } }); }, 250) });
   actions.dnSave = () => {
-    const inp = $('#dn-text', root); const t = inp ? inp.value.trim() : '';
-    if (editId) { actions.dnUpdate({ dataset: { id: editId } }); return; }
-    if (t) { db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t, at: Date.now() }); save(); render(); }
-    closeSheet();
+    const t = ($('#dn-text', root) || {}).value; if (t == null) return;
+    db.dayNotes = db.dayNotes.filter((x) => x.date !== s); // 하루에 제목 하나
+    if (t.trim()) db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t.trim(), at: Date.now() });
+    save(); closeSheet(); render();
   };
-  actions.dnEdit = (el) => dayNoteSheet(s, el.dataset.id);
-  actions.dnUpdate = (el) => {
-    const x = db.dayNotes.find((y) => y.id === el.dataset.id); const v = ($('#dn-edit', root) || {}).value;
-    if (x && v != null) { if (v.trim()) { x.text = v.trim(); x.editedAt = Date.now(); } else db.dayNotes = db.dayNotes.filter((y) => y.id !== x.id); save(); render(); }
-    dayNoteSheet(s);
-  };
-  actions.dnDel = (el) => { db.dayNotes = db.dayNotes.filter((x) => x.id !== el.dataset.id); save(); render(); dayNoteSheet(s); };
 }
 /* 휴대폰 갤러리 '공유 → nneow' 로 받은 사진 */
 async function receiveShared() {
@@ -1948,7 +1934,7 @@ const actions = {
     eventSheet({ startTime: `${pad(h)}:00`, endTime: `${pad(Math.min(23, h + 1))}:${h === 23 ? '59' : '00'}` });
   },
   newEvent: () => { if (S.viewPartner) { toast(`${you().name}의 캘린더는 볼 수만 있어요`); return; } eventSheet({}); },
-  openEvent: (el) => { const e = db.events.find((x) => x.id === el.dataset.id); if (e) eventDetail(e); },
+  openEvent: (el) => { const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return; if (S.screen === 'split' && e.owner === ME) { eventSheet(e); return; } eventDetail(e); }, // 함께 보기: 내 일정 누르면 바로 수정
   openDeadline: (el) => {
     const d = db.deadlines.find((x) => x.id === el.dataset.id); if (!d) return;
     const mine = d.owner === ME;
@@ -2195,7 +2181,9 @@ const LONG = {
   },
   evNote: (el) => {
     const e = db.events.find((x) => x.id === el.dataset.id); if (!e) return;
-    if (e.owner === ME && S.screen === 'split') { evMenu(e); return; } // 함께 보기: 꾹 → 수정 / 삭제
+    if (e.owner === ME && S.screen === 'split') { // 함께 보기: 꾹 → 바로 삭제 확인
+      confirmSheet('삭제하시겠습니까?', esc(e.title), '삭제', () => { db.events = db.events.filter((x) => x.id !== e.id); save(); render(); toast('삭제했어요'); }, true); return;
+    }
     if (e.owner === ME) { eventDetail(e); return; }
     if (!db.users[e.owner].allowAccess) { toast(`${db.users[e.owner].name}가 접근을 허용하지 않았어요`); return; }
     noteSheet(e);

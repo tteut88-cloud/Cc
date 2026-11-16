@@ -992,3 +992,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .dn-item.editing input { flex: 1; height: 34px; padding: 4px 10px; background: var(--surface); }
 .dn-item.editing button { color: var(--fg); }
 .dn-item .dn-text { color: var(--fg); text-align: left; flex: 1; width: auto; height: auto; display: block; }
+
+/* 날짜 사진 창: 제목 가운데 */
+.dp-title { text-align: center; font-weight: 700; font-size: 1.02em; margin: -4px 0 12px; }
+.g-who { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
