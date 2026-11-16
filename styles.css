@@ -892,3 +892,16 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .pv-count { flex: 1; text-align: center; font-size: .9em; font-weight: 700; padding: 10px 0; border-radius: 10px; }
 .pv-count:active { background: var(--soft); }
 .ev small.nt { white-space: normal; line-height: 1.25; }
+
+/* ===== v23 ===== */
+.range-pop .rp-opt { display: flex; align-items: center; gap: 8px; background: var(--soft) !important; color: var(--fg) !important; }
+.range-pop .rp-opt i { width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--line-strong); flex-shrink: 0; }
+.range-pop .rp-opt.on i { background: var(--fg); border-color: var(--fg); }
+.range-pop .rp-go { background: var(--fg) !important; color: var(--bg) !important; text-align: center; }
+.pv-dots { font-size: 13px; letter-spacing: 1px; font-weight: 900; }
+.pv-post { display: flex; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.pv-post img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.pv-post p { margin: 4px 0; white-space: pre-wrap; word-break: break-word; }
+.pv-post em { font-style: normal; font-size: .76em; color: var(--muted); }
+.pv-post .muted { color: var(--muted); }
+.pv-comments { padding-left: 0; padding-right: 0; }

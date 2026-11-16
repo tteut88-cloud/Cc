@@ -304,8 +304,9 @@ function toastHTML(html) {
 }
 const toast = (s) => toastHTML(esc(s));
 
+const notifOff = () => localStorage.getItem('nneow.notifOff') === '1';
 function systemNotify(n) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('Notification' in window) || Notification.permission !== 'granted' || notifOff()) return;
   try {
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then((r) => r.showNotification('nneow', { body: n.text, icon: 'assets/icons/icon-192.png', tag: n.id }));
@@ -515,7 +516,7 @@ SCREENS.month = () => {
   const cellHTML = (s, i, out, wrap) => {
     const d = parse(s);
     const dm = out ? [] : memosOn(s);
-    const memoCol = dm.length ? db.users[(dm.find((x) => x.owner === ME) || dm[0]).owner].colors.memo : '';
+    const memoCol = dm.length ? me().colors.memo : ''; // 상대가 보낸 메모 줄 = 내 메모 줄 (내가 정한 색)
     const rainy = !out && rainLikely(s);
     const dlEnd = !out && evs.some((x) => x.deadline && x.end === s);
     const phs = S.photoMode && !out ? photosOn(s) : [];
@@ -578,7 +579,7 @@ SCREENS.month = () => {
       <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button></div>
       <button class="icon-btn" data-act="toSearch" aria-label="검색">${ICON.search}</button>
     </header>
-    ${S.rangeStart && S.rangeEnd ? `<div class="range-pop" id="range-pop"><button data-act="rangePick" data-v="event">연속 일정</button><button data-act="rangePick" data-v="deadline">◢ 데드라인</button></div>` : ''}
+    ${S.rangeStart && S.rangeEnd ? `<div class="range-pop" id="range-pop"><button data-act="rangeToggle" data-v="event" class="rp-opt ${S.rangeEv !== false ? 'on' : ''}"><i></i>연속 일정</button><button data-act="rangeToggle" data-v="deadline" class="rp-opt ${S.rangeDl ? 'on' : ''}"><i></i>◢ 데드라인</button><button data-act="rangeGo" class="rp-go">입력하기</button></div>` : ''}
     ${S.placing ? `<div class="place-hint">${STICKERS[S.placing].svg}<span>붙이고 싶은 자리를 눌러주세요</span><button data-act="cancelPlace">취소</button></div>` : ''}
     <div class="weekdays">${WD.map((d, i) => `<span class="${i === 0 ? 'sun' : ''}">${d}</span>`).join('')}</div>
     <div class="grid" id="grid">${html}</div>
@@ -631,7 +632,7 @@ function stripHTML() {
 /* 날짜 제목 + 그날 메모가 있으면 메모 색 줄 (누르면 메모 보기) */
 function dateTitle(s, nav) {
   const ms = memosOn(s);
-  const col = ms.length ? db.users[(ms.find((x) => x.owner === ME) || ms[0]).owner].colors.memo : ''; // 밑줄 = 설정의 메모 색
+  const col = ms.length ? me().colors.memo : ''; // 밑줄 = 내가 설정한 메모 색
   const t = `<span class="dt-text">${fmtDate(s)}</span>${col ? `<span class="dt-line" style="--c:${col}"></span>` : ''}`;
   const inner = col ? `<button class="dt-btn" data-act="dayMemos" data-date="${s}">${t}</button>` : `<span class="dt-btn">${t}</span>`;
   return nav ? `<span class="dt-nav"><button data-act="splitPrev" aria-label="전날">${ICON.left}</button>${inner}<button data-act="splitNext" aria-label="다음날">${ICON.right}</button></span>` : inner;
@@ -663,7 +664,7 @@ function layoutTimed(list, minDur = 30, snap = false) {
 }
 const shortTime = (t) => { if (!t) return ''; const [h, mm] = t.split(':').map(Number); return `${h % 12 === 0 ? 12 : h % 12}${mm ? ':' + pad(mm) : '시'}`; };
 function evBlocks(list, narrow) {
-  return layoutTimed(list, narrow ? 60 : 30, !!narrow).map((g) => {
+  return layoutTimed(list, 60, true).map((g) => { // 1시간 칸 기본, N시간이면 N칸
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
     const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
     return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
@@ -940,7 +941,7 @@ SCREENS.settings = () => `
         <li><button data-act="toSync">다른 캘린더와 동기화${ICON.right}</button></li>
         <li><button data-act="editNames">이름<span class="val">${esc(me().name)} · ${esc(you().name)}</span>${ICON.right}</button></li>
         <li><button data-act="toNotifs">알림 설정<span class="val">${Object.values(notifPrefs()).filter(Boolean).length}개 받는 중</span>${ICON.right}</button></li>
-        <li><button data-act="askNotif">알림 허용<span class="val">${'Notification' in window ? ({ granted: '허용됨', denied: '차단됨', default: '꺼짐' }[Notification.permission]) : '지원 안 됨'}</span>${ICON.right}</button></li>
+        <li><button data-act="askNotif">알림 허용<span class="val">${'Notification' in window ? (Notification.permission === 'granted' && !notifOff() ? '허용됨' : '허용 안 됨') : '지원 안 됨'}</span><span class="switch ${'Notification' in window && Notification.permission === 'granted' && !notifOff() ? 'on' : ''}"></span></button></li>
         <li><button data-act="refreshWx">날씨 새로고침<span class="val">${wx ? (wx.gps ? 'GPS 위치' : '서울 기준') : '-'}</span>${ICON.right}</button></li>
         ${CLOUD ? '' : `<li><button data-act="openPartnerTab">상대 화면 열기 (같은 기기 미리보기)${ICON.right}</button></li>`}
       </ul>
@@ -1450,7 +1451,7 @@ SCREENS.photo = () => {
   const likes = Object.values(g.likes || {}).filter(Boolean).length; const liked = !!(g.likes && g.likes[ME]);
   const cs = g.comments || [];
   return `<section class="screen pv">
-    ${topbar(fmtDate(g.date), g.owner === ME ? `<button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button>` : '')}
+    ${topbar(fmtDate(g.date), g.owner === ME ? `<span class="pv-top"><button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button><button class="icon-btn pv-dots" data-act="pvMemo" aria-label="메모">•••</button></span>` : '')}
     <div class="scroll">
       <div class="pv-main" id="pv-main"><img src="${g.src || g.img}" alt="" /></div>
       <div class="pv-strip" id="pv-strip">${list.map((x) => `<button class="${x.id === g.id ? 'on' : ''}" data-act="pvPick" data-id="${x.id}" id="pv-${x.id}"><img src="${x.img}" alt="" loading="lazy" /></button>`).join('')}</div>
@@ -1468,6 +1469,7 @@ function photoComments() {
   const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
   const cs = g.comments || [];
   openSheet(`<div class="sheet-head"><span></span><h3>댓글 ${cs.length}개</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    <div class="pv-post"><img src="${g.img}" alt="" /><div><b>${esc(whoName(g.owner))}</b><p>${g.caption ? esc(g.caption) : '<span class="muted">메모가 없어요</span>'}</p><em>${fmtDate(g.date)} · 좋아요 ${Object.values(g.likes || {}).filter(Boolean).length}개</em></div></div>
     <div class="pv-comments">${cs.map((c) => `<div class="cm"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('') || '<div class="empty" style="padding:16px 0">첫 댓글을 남겨보세요</div>'}</div>
     <form class="composer pv-form" data-form="photoCmt"><input name="text" id="pc-input" placeholder="댓글 달기" autocomplete="off" enterkeyhint="send" /><button class="icon-btn send" type="submit" aria-label="댓글 보내기">${ICON.send}</button></form>`,
   { bind: (sh) => setTimeout(() => { const i = $('#pc-input', sh); if (i) i.focus(); }, 250) });
@@ -1800,6 +1802,12 @@ const actions = {
   pvLike: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return; g.likes = { ...(g.likes || {}), [ME]: !(g.likes && g.likes[ME]) }; if (g.likes[ME] && g.owner !== ME) notify('photo', `${me().name}님이 사진에 좋아요를 눌렀어요`); save(); render(false, true); },
   pvMore: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (g) photoViewer(g); },
   pvComments: () => photoComments(),
+  pvMemo: () => { // ••• → 사진에 메모 넣기
+    const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
+    openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>사진 메모</h3><button class="icon-btn" data-act="pvMemoSave">${ICON.check}</button></div>
+      <div class="field"><textarea id="pv-memo" rows="4" placeholder="이 사진에 남길 메모">${esc(g.caption || '')}</textarea></div>`, { bind: (sh) => setTimeout(() => $('#pv-memo', sh).focus(), 250) });
+    actions.pvMemoSave = () => { g.caption = $('#pv-memo', root).value.trim(); save(); closeSheet(); render(false, true); toast('메모를 넣었어요'); };
+  },
   pvDelete: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return; confirmSheet('이 사진을 삭제할까요?', `${esc(you().name)}의 갤러리에서도 사라져요`, '삭제', () => { db.gallery = db.gallery.filter((x) => x.id !== g.id); save(); back(); }, true); },
   pvShare: async () => {
     const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
@@ -1816,9 +1824,16 @@ const actions = {
     S.placing = el.dataset.k; S.viewPartner = true; render();
   },
   cancelPlace: () => { S.placing = null; render(); },
-  rangePick: (el) => {
-    const a = S.rangeStart, b = S.rangeEnd; S.rangeStart = null; S.rangeEnd = null; render();
-    eventSheet({ start: a < b ? a : b, end: a < b ? b : a, allDay: true, deadline: el.dataset.v === 'deadline' });
+  rangeToggle: (el) => {
+    if (el.dataset.v === 'event') S.rangeEv = S.rangeEv === false; else S.rangeDl = !S.rangeDl;
+    if (S.rangeEv === false && !S.rangeDl) S.rangeEv = true; // 하나는 골라야 함
+    render();
+  },
+  rangeGo: () => { // 연속 일정 · 데드라인 각각 또는 둘 다
+    const a = S.rangeStart, b = S.rangeEnd; const ev = S.rangeEv !== false, dl = !!S.rangeDl;
+    S.rangeStart = null; S.rangeEnd = null; S.rangeEv = true; S.rangeDl = false; render();
+    const start = a < b ? a : b, end = a < b ? b : a;
+    eventSheet(ev ? { start, end, allDay: true, deadline: dl } : { start: end, end, allDay: true, deadline: true });
   },
   openSticker: (el) => { const x = db.stickers.find((y) => y.id === el.dataset.id); if (x) stickerSheet(x); },
   poke: () => pokeSheet(),
@@ -1897,10 +1912,14 @@ const actions = {
       <div class="field"><label>상대 이름</label><input id="n-you" value="${esc(you().name)}" maxlength="12" /></div>`);
     actions.saveNames = () => { me().name = $('#n-me').value.trim() || me().name; you().name = $('#n-you').value.trim() || you().name; save(); closeSheet(); render(); };
   },
-  askNotif: async () => {
+  askNotif: async () => { // 누를 때마다 허용됨 ↔ 허용 안 됨
     if (!('Notification' in window)) { toast('이 브라우저는 알림을 지원하지 않아요'); return; }
     localStorage.setItem('nneow.notifAsked', '1');
-    const p = await Notification.requestPermission(); render(); toast(p === 'granted' ? '알림을 켰어요' : '알림이 꺼져 있어요');
+    if (Notification.permission === 'granted' && !notifOff()) { localStorage.setItem('nneow.notifOff', '1'); render(); toast('알림을 껐어요'); return; }
+    localStorage.removeItem('nneow.notifOff');
+    if (Notification.permission === 'denied') { render(); toast('휴대폰 설정 → 알림에서 nneow를 허용해 주세요'); return; }
+    const p = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    render(); toast(p === 'granted' ? '알림을 켰어요' : '알림이 꺼져 있어요');
   },
   refreshWx: async () => { toast('날씨를 불러오는 중…'); await loadWeather(true); render(); },
   openPartnerTab: () => { const u = new URL(location.href); u.searchParams.set('as', YOU); window.open(u.toString(), '_blank'); },
@@ -2049,7 +2068,7 @@ const LONG = {
     const d = el.dataset.date;
     if (S.rangeStart && !S.rangeEnd && d !== S.rangeStart) { S.rangeEnd = d; render(); return; } // 두 번째 칸 꾹 → 거기까지 표시 + 메뉴
     if (S.rangeStart && d === S.rangeStart && !S.rangeEnd) { S.rangeStart = null; render(); return; }
-    S.rangeStart = d; S.rangeEnd = null; render();
+    S.rangeStart = d; S.rangeEnd = null; S.rangeEv = true; S.rangeDl = false; render();
   },
   strip: (el) => {
     const d = el.dataset.date;
