@@ -321,6 +321,7 @@ function applyRemote(next, persist) {
   if (persist) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* 용량 초과 시 캐시 생략 */ } }
   const fresh = db.notifs.filter((n) => n.to === ME && !prevIds.has(n.id) && Date.now() - n.at < 5 * 60e3).slice(-3);
   fresh.forEach((n) => {
+    if (!wantNotif(n)) return; // 알림 설정에서 끈 것
     if (n.alert) { systemNotify(n); return; } // SOS!·하트는 큰 알림으로만
     toastHTML(n.face ? `${face(n.face)} ${esc(n.text)}` : esc(n.text));
     systemNotify(n);
@@ -339,11 +340,8 @@ let bumpSmile = false; let renderQuiet = false;
 /* ================= 환경 설정 반영 ================= */
 const FONTS = {
   wanted: { label: 'Wanted Sans', css: '"Wanted Sans Variable", "Wanted Sans", -apple-system, "Apple SD Gothic Neo", sans-serif' },
-  system: { label: '시스템 기본', css: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif' },
-  serif: { label: '명조', css: '"Nanum Myeongjo", "AppleMyungjo", "Noto Serif KR", "Batang", serif' },
   busan: { label: '부산단디명조', css: '"BusanDandiMyeongjoL", "Nanum Myeongjo", "AppleMyungjo", serif' },
   himchan: { label: '인천교육힘찬', css: '"IncheonHimchan", "Apple SD Gothic Neo", sans-serif' },
-  round: { label: '둥근 고딕', css: '"Nanum Square Round", "NanumSquareRound", "Jua", "Apple SD Gothic Neo", sans-serif' },
 };
 const THEMES = { light: '화이트', pink: '핑크', cream: '크림', dark: '다크' };
 const SIZES = { 0.9: '작게', 1: '보통', 1.1: '크게' };
@@ -419,7 +417,7 @@ SCREENS.list = () => {
     <div class="scroll" id="list-scroll">
       <ul class="todo-list">
         ${items.length ? items.map((e) => { const done = isDone(e, ME); return `
-          <li class="todo ${done ? 'done' : ''} ${e.quick ? 'quick' : ''}">
+          <li class="todo ${done ? 'done' : ''} ${e.quick ? 'quick' : ''}" ${e.owner === ME ? `data-lp="todoEdit" data-id="${e.id}"` : ''}>
             ${e.quick
               ? `<button class="tri ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></button>`
               : `<button class="chk ${done ? 'on' : ''}" data-act="toggleDone" data-id="${e.id}" aria-label="완료">${done ? ICON.check : ''}</button>`}
@@ -428,10 +426,9 @@ SCREENS.list = () => {
             ${e.owner !== ME ? `<span class="tag">${esc(you().name)}</span>` : e.shared ? '<span class="tag">함께</span>' : ''}
           </li>`; }).join('') : (S.quickAdd ? '' : '<li class="empty">오늘은 일정이 없어요<br/>빈 곳을 누르면 바로 적을 수 있어요</li>')}
         ${S.quickAdd ? `<li class="todo quick"><span class="tri"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg></span>
-          <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="done" />
-            <input name="time" type="time" class="quick-time" aria-label="시간 (선택)" />
-            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인">◢</button>
-            <button type="submit" class="quick-ok" aria-label="저장">${ICON.check}</button></form></li>` : ''}
+          <form data-form="quickAdd" class="quick-form"><input name="text" id="quick-input" placeholder="오늘 할 일" autocomplete="off" enterkeyhint="enter" />
+            <label class="qt"><span>시간설정</span><input name="time" type="time" aria-label="시간설정" /></label>
+            <button type="button" class="quick-dl ${S.quickDeadline ? 'on' : ''}" data-act="quickDl" aria-label="데드라인">◢</button></form></li>` : ''}
       </ul>
       <div class="list-space"></div>
     </div>
@@ -478,7 +475,9 @@ after.list = () => {
     if (Math.abs(e.clientY - sy) > 12 || S.quickAdd) return; // 스크롤은 무시
     S.quickAdd = true; S.quickDeadline = false; render(false, true); const i = $('#quick-input'); if (i) i.focus();
   });
+  const qt = $('.qt input'); if (qt) qt.addEventListener('input', () => qt.parentElement.classList.toggle('has', !!qt.value));
   const i = $('#quick-input');
+  if (i) i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); i.form.requestSubmit(); } }); // 키보드 줄바꿈 = 등록
   if (i) { i.focus(); i.addEventListener('blur', () => setTimeout(() => { const f = i.closest('form'); if (S.quickAdd && !i.value.trim() && !(f && f.contains(document.activeElement))) { S.quickAdd = false; render(); } }, 200)); }
 };
 
@@ -574,9 +573,9 @@ SCREENS.month = () => {
   <section class="screen">
     <header class="month-head">
       <button class="icon-btn smile-btn ${bumpSmile ? 'bump' : ''}" data-act="smile" data-lp="mood" aria-label="표정 / 사진 보기 전환">${S.viewPartner ? catFace() : face(S.flashFace || (S.photoMode ? 'wink' : curFace))}</button>
-      <button class="icon-btn" data-act="prevMonth" aria-label="이전 달">${ICON.left}</button>
+      <div class="mh-center"><button class="icon-btn" data-act="prevMonth" aria-label="이전 달">${ICON.left}</button>
       <button class="month-title" data-act="pickMonth">${y}년 ${m + 1}월</button>
-      <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button>
+      <button class="icon-btn" data-act="nextMonth" aria-label="다음 달">${ICON.right}</button></div>
       <button class="icon-btn" data-act="toSearch" aria-label="검색">${ICON.search}</button>
     </header>
     ${S.rangeStart && S.rangeEnd ? `<div class="range-pop" id="range-pop"><button data-act="rangePick" data-v="event">연속 일정</button><button data-act="rangePick" data-v="deadline">◢ 데드라인</button></div>` : ''}
@@ -645,8 +644,12 @@ function dayMemosSheet(s) {
 }
 
 /* 겹치는 일정을 나란히 배치 */
-function layoutTimed(list, minDur = 30) {
-  const items = list.map((e) => ({ e, s: toMin(e.startTime), f: Math.max(toMin(e.endTime || e.startTime), toMin(e.startTime) + minDur) }))
+function layoutTimed(list, minDur = 30, snap = false) {
+  const items = list.map((e) => {
+    let s0 = toMin(e.startTime), f0 = Math.max(toMin(e.endTime || e.startTime), s0 + minDur);
+    if (snap) { s0 = Math.floor(s0 / 60) * 60; f0 = Math.max(Math.ceil(f0 / 60) * 60, s0 + 60); } // 시간 칸에 꽉 차게
+    return { e, s: s0, f: f0 };
+  })
     .sort((a, b) => a.s - b.s || b.f - a.f);
   const cols = []; let group = []; let groupEnd = -1; const out = [];
   const flush = () => { const n = Math.max(1, ...group.map((g) => g.col + 1)); group.forEach((g) => { g.n = n; out.push(g); }); group = []; cols.length = 0; };
@@ -660,12 +663,12 @@ function layoutTimed(list, minDur = 30) {
 }
 const shortTime = (t) => { if (!t) return ''; const [h, mm] = t.split(':').map(Number); return `${h % 12 === 0 ? 12 : h % 12}${mm ? ':' + pad(mm) : '시'}`; };
 function evBlocks(list, narrow) {
-  return layoutTimed(list, narrow ? 60 : 30).map((g) => {
+  return layoutTimed(list, narrow ? 60 : 30, !!narrow).map((g) => {
     const hasMemo = !!g.e.memo || memosOn(g.e.start).length > 0;
     const hasNote = (g.e.notes || []).some((n) => n.by !== g.e.owner); // 상대가 남긴 메모 = 검은 동그라미
     return `<button class="ev" data-act="openEvent" data-lp="evNote" data-id="${g.e.id}" style="--c:${colorOf(g.e)};top:${g.s / 60 * ROW + 2}px;height:${(g.f - g.s) / 60 * ROW - 4}px;left:calc(${g.col} * 100% / ${g.n} + 4px);width:calc(100% / ${g.n} - 8px)">
       ${esc(g.e.title)}${hasMemo ? '<span class="mini"></span>' : ''}${hasNote ? '<span class="mini dot"></span>' : ''}
-      ${narrow ? `<small class="nt">${shortTime(g.e.startTime)}–${shortTime(g.e.endTime || g.e.startTime)}</small>` : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
+      ${narrow ? `<small class="nt">${timeLabel(g.e.startTime)} – ${timeLabel(g.e.endTime || g.e.startTime)}</small>` : `<small>${timeLabel(g.e.startTime)}${g.e.endTime ? ' – ' + timeLabel(g.e.endTime) : ''}${g.e.owner !== ME ? ' · ' + esc(db.users[g.e.owner].name) : ''}</small>`}
     </button>`;
   }).join('');
 }
@@ -936,6 +939,7 @@ SCREENS.settings = () => `
         <li><button data-act="toPair">상대 휴대폰과 연결<span class="val">${cloudLabel()}</span>${ICON.right}</button></li>
         <li><button data-act="toSync">다른 캘린더와 동기화${ICON.right}</button></li>
         <li><button data-act="editNames">이름<span class="val">${esc(me().name)} · ${esc(you().name)}</span>${ICON.right}</button></li>
+        <li><button data-act="toNotifs">알림 설정<span class="val">${Object.values(notifPrefs()).filter(Boolean).length}개 받는 중</span>${ICON.right}</button></li>
         <li><button data-act="askNotif">알림 허용<span class="val">${'Notification' in window ? ({ granted: '허용됨', denied: '차단됨', default: '꺼짐' }[Notification.permission]) : '지원 안 됨'}</span>${ICON.right}</button></li>
         <li><button data-act="refreshWx">날씨 새로고침<span class="val">${wx ? (wx.gps ? 'GPS 위치' : '서울 기준') : '-'}</span>${ICON.right}</button></li>
         ${CLOUD ? '' : `<li><button data-act="openPartnerTab">상대 화면 열기 (같은 기기 미리보기)${ICON.right}</button></li>`}
@@ -945,6 +949,39 @@ SCREENS.settings = () => `
       <p class="note">nneow · 지금 <b>${esc(me().name)}</b>(으)로 사용 중이에요. ${CLOUD ? '상대 휴대폰과 실시간으로 공유되고 있어요.' : '아직 상대 휴대폰과 연결되지 않아 이 기기 안에만 저장돼요. ‘상대 휴대폰과 연결’에서 연결해 주세요.'}</p>
     </div>
   </section>`;
+
+/* ---------- 알림 설정: 어떤 걸 알림으로 받을지 ---------- */
+const NOTIF_KINDS = [
+  ['mood', '상대의 표정', '상대가 오늘의 표정을 바꾸면'],
+  ['sos', 'SOS! · 검은 하트', '눈물·아픔·화남(SOS!), 뽀뽀(하트) 신호'],
+  ['poke', '콕 찌르기', '상대가 콕 찌르면 바로 띄우기'],
+  ['memo', '메모 · 댓글', '상대가 보낸 메모, 공지, 댓글'],
+  ['event', '공유 일정', '상대가 공유 일정을 넣거나 고치면'],
+  ['deadline', '데드라인 일정', '오늘·내일이 마감인 일정 미리 알려주기'],
+  ['photo', '사진 · 밥', '공유 갤러리에 사진이나 식사를 올리면'],
+  ['sticker', '스티커', '상대가 내 캘린더에 스티커를 붙이면'],
+];
+const notifPrefs = () => ({ ...Object.fromEntries(NOTIF_KINDS.map(([k]) => [k, true])), ...(me().notifPrefs || {}) });
+const notifKind = (n) => (n.alert ? 'sos' : n.type === 'note' ? 'memo' : n.type === 'access' || n.type === 'color' ? 'event' : n.type === 'deadline' ? 'event' : n.type);
+const wantNotif = (n) => notifPrefs()[notifKind(n)] !== false;
+SCREENS.notifs = () => {
+  const pr = notifPrefs();
+  return `<section class="screen">${topbar('알림 설정')}<div class="scroll">
+    <ul class="menu">${NOTIF_KINDS.map(([k, l, d]) => `<li><button data-act="notifPref" data-k="${k}"><span class="np"><b>${l}</b><small>${d}</small></span><span class="switch ${pr[k] ? 'on' : ''}"></span></button></li>`).join('')}</ul>
+    <p class="note">끈 알림은 화면 안의 알림과 휴대폰 알림 모두 오지 않아요.<br/>휴대폰 알림을 받으려면 설정 → 알림 허용도 켜주세요.</p></div></section>`;
+};
+/* 데드라인 미리 알림: 하루 한 번, 오늘·내일 마감인 내 일정 */
+function deadlineReminder() {
+  if (!notifPrefs().deadline) return;
+  const t = todayStr(); const key = 'nneow.dlNotified'; if (localStorage.getItem(key) === t) return;
+  const tm = addDays(t, 1);
+  const due = visibleEvents(ME).filter((e) => e.deadline && (e.end === t || e.end === tm) && !isDone(e, ME));
+  if (!due.length) return;
+  localStorage.setItem(key, t);
+  const text = due.map((e) => `${e.title} (${e.end === t ? '오늘' : '내일'} 마감)`).join(', ');
+  setTimeout(() => toastHTML(`◢ ${esc(text)}`), 900);
+  systemNotify({ id: 'dl-' + t, text: `데드라인: ${text}` });
+}
 
 /* ---------- 상대 휴대폰과 연결 ---------- */
 const C = () => window.nneowCloud;
@@ -1410,24 +1447,31 @@ SCREENS.photo = () => {
   const list = galleryList(); const g = db.gallery.find((x) => x.id === S.photoId) || list[0];
   if (!g) return `<section class="screen">${topbar('사진')}<div class="empty">사진이 없어요</div></section>`;
   S.photoId = g.id;
-  const d = new Date(g.at); const likes = Object.values(g.likes || {}).filter(Boolean).length; const liked = !!(g.likes && g.likes[ME]);
+  const likes = Object.values(g.likes || {}).filter(Boolean).length; const liked = !!(g.likes && g.likes[ME]);
   const cs = g.comments || [];
   return `<section class="screen pv">
-    ${topbar(`<span class="pv-date">${fmtDate(g.date)}<small>${clockLabel(g.at)}${d && ymd(d) !== g.date ? ` · ${d.getMonth() + 1}/${d.getDate()} 올림` : ''}</small></span>`, g.owner === ME ? `<span class="pv-top"><button class="icon-btn" data-act="pvMore" aria-label="더보기">${ICON.more}</button><button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button></span>` : '')}
+    ${topbar(fmtDate(g.date), g.owner === ME ? `<button class="icon-btn" data-act="pvDelete" aria-label="삭제">${ICON.trash}</button>` : '')}
     <div class="scroll">
       <div class="pv-main" id="pv-main"><img src="${g.src || g.img}" alt="" /></div>
+      <div class="pv-strip" id="pv-strip">${list.map((x) => `<button class="${x.id === g.id ? 'on' : ''}" data-act="pvPick" data-id="${x.id}" id="pv-${x.id}"><img src="${x.img}" alt="" loading="lazy" /></button>`).join('')}</div>
       <div class="pv-actions">
-        <button class="pv-like ${liked ? 'on' : ''}" data-act="pvLike" aria-label="좋아요"><svg class="ico" viewBox="0 0 24 24"><path d="M7 10.5V20H4.5a1 1 0 0 1-1-1v-7.5a1 1 0 0 1 1-1zM7 10.5l3.6-6.3a1.8 1.8 0 0 1 3.3 1.3L13 9.5h5.2a2 2 0 0 1 2 2.4l-1.3 6.4a2 2 0 0 1-2 1.7H7"/></svg></button>
-        <span class="pv-count">좋아요 ${likes}개 · 댓글 ${cs.length}개</span>
         <button class="icon-btn pv-share" data-act="pvShare" aria-label="공유">${ICON.share}</button>
+        <button class="pv-count" data-act="pvComments">댓글 ${cs.length}개 · 좋아요 ${likes}개</button>
+        <button class="pv-like ${liked ? 'on' : ''}" data-act="pvLike" aria-label="좋아요"><svg class="ico" viewBox="0 0 24 24"><path d="M7 10.5V20H4.5a1 1 0 0 1-1-1v-7.5a1 1 0 0 1 1-1zM7 10.5l3.6-6.3a1.8 1.8 0 0 1 3.3 1.3L13 9.5h5.2a2 2 0 0 1 2 2.4l-1.3 6.4a2 2 0 0 1-2 1.7H7"/></svg></button>
       </div>
       ${g.caption ? `<div class="pv-cap"><b>${esc(whoName(g.owner))}</b> ${esc(g.caption)}</div>` : ''}
-      <div class="pv-strip" id="pv-strip">${list.map((x) => `<button class="${x.id === g.id ? 'on' : ''}" data-act="pvPick" data-id="${x.id}" id="pv-${x.id}"><img src="${x.img}" alt="" loading="lazy" /></button>`).join('')}</div>
-      <div class="pv-comments">${cs.map((c) => `<div class="cm"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('')}</div>
-      <form class="composer pv-form" data-form="photoCmt"><input name="text" placeholder="댓글 달기" autocomplete="off" /><button class="icon-btn send" type="submit" aria-label="댓글 보내기">${ICON.send}</button></form>
     </div>
   </section>`;
 };
+/* 댓글 n개 · 좋아요 n개 누르면 → 댓글 창 */
+function photoComments() {
+  const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
+  const cs = g.comments || [];
+  openSheet(`<div class="sheet-head"><span></span><h3>댓글 ${cs.length}개</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    <div class="pv-comments">${cs.map((c) => `<div class="cm"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('') || '<div class="empty" style="padding:16px 0">첫 댓글을 남겨보세요</div>'}</div>
+    <form class="composer pv-form" data-form="photoCmt"><input name="text" id="pc-input" placeholder="댓글 달기" autocomplete="off" enterkeyhint="send" /><button class="icon-btn send" type="submit" aria-label="댓글 보내기">${ICON.send}</button></form>`,
+  { bind: (sh) => setTimeout(() => { const i = $('#pc-input', sh); if (i) i.focus(); }, 250) });
+}
 after.photo = () => {
   const st = $('#pv-' + S.photoId); const strip = $('#pv-strip');
   if (st && strip) strip.scrollLeft = st.offsetLeft - strip.clientWidth / 2 + st.offsetWidth / 2;
@@ -1500,7 +1544,7 @@ function pokeSheet() {
 /* 상대의 SOS! / 검은 하트: 그것만 크게 띄우고, 누르면 사라짐 */
 function showMoodAlert() {
   const m = db.moods[YOU];
-  if (!m || !m.alert || m.alertSeen || Date.now() - m.at > 24 * HOUR) return false;
+  if (!m || !m.alert || m.alertSeen || Date.now() - m.at > 24 * HOUR || !notifPrefs().sos) return false;
   root.innerHTML = `<div class="overlay center mood-alert" data-act="moodAlertOk"><div class="ma-body">${m.alert === 'sos' ? '<span class="sos">SOS!</span>' : BLACK_HEART}</div></div>`;
   actions.moodAlertOk = () => { m.alertSeen = true; save(); root.innerHTML = ''; setTimeout(showPokes, 0); };
   return true;
@@ -1509,7 +1553,7 @@ function showPokes() {
   if ($('.overlay')) return;
   if (showMoodAlert()) return;
   const p = db.pokes.filter((x) => x.to === ME && !x.seenAt).sort((a, b) => a.at - b.at)[0];
-  if (!p) return;
+  if (!p || !notifPrefs().poke) return;
   openSheet(`<div class="poke-hand shake"><img src="assets/icons/poke.png" alt="" /></div><div class="confirm-text">${esc(db.users[p.from].name)}님이 콕 찔렀어요!</div>
     <div class="poke-msg">${esc(p.text)}</div><div class="confirm-sub">${ago(p.at)}</div>
     <div class="actions"><button class="btn block" data-act="pokeOk">확인</button></div>`, { center: true });
@@ -1657,6 +1701,8 @@ const actions = {
   toColors: () => go('colors'),
   toSync: () => go('sync'),
   toPair: () => go('pair'),
+  toNotifs: () => go('notifs'),
+  notifPref: (el) => { const k = el.dataset.k; const pr = notifPrefs(); me().notifPrefs = { ...(me().notifPrefs || {}), [k]: !pr[k] }; save(); render(false, true); },
   loginGoogle: () => { S.lastLogin = 'google'; cloudTry(() => C().signInGoogle()); },
   loginEmail: () => {
     const em = ($('#l-email') || {}).value || ''; const pw = ($('#l-pw') || {}).value || '';
@@ -1753,6 +1799,7 @@ const actions = {
   pvPick: (el) => { S.photoId = el.dataset.id; history.replaceState({ screen: 'photo', photoId: S.photoId }, ''); render(false, false); },
   pvLike: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return; g.likes = { ...(g.likes || {}), [ME]: !(g.likes && g.likes[ME]) }; if (g.likes[ME] && g.owner !== ME) notify('photo', `${me().name}님이 사진에 좋아요를 눌렀어요`); save(); render(false, true); },
   pvMore: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (g) photoViewer(g); },
+  pvComments: () => photoComments(),
   pvDelete: () => { const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return; confirmSheet('이 사진을 삭제할까요?', `${esc(you().name)}의 갤러리에서도 사라져요`, '삭제', () => { db.gallery = db.gallery.filter((x) => x.id !== g.id); save(); back(); }, true); },
   pvShare: async () => {
     const g = db.gallery.find((x) => x.id === S.photoId); if (!g) return;
@@ -1963,6 +2010,21 @@ function mealSheet() {
   });
 }
 
+/* LIST 할 일 꾹 → 수정 / 삭제 */
+function todoSheet(e) {
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>할 일 수정</h3><button class="icon-btn" data-act="tdSave">${ICON.check}</button></div>
+    <div class="field"><input id="td-title" value="${esc(e.title)}" /></div>
+    <div class="date-row"><span>시간</span><input type="time" id="td-time" class="date-pill" value="${e.startTime || ''}" /></div>
+    <div class="switch-row">◢ 데드라인<button class="switch ${e.deadline ? 'on' : ''}" id="td-dl"></button></div>
+    <button class="btn danger block" data-act="tdDel" style="margin-top:8px">삭제</button>`, { bind: (sh) => { $('#td-dl', sh).onclick = (x) => x.currentTarget.classList.toggle('on'); } });
+  actions.tdSave = () => {
+    const title = $('#td-title', root).value.trim(); if (!title) { toast('할 일을 입력해 주세요'); return; }
+    const tm = $('#td-time', root).value;
+    Object.assign(e, { title, startTime: tm, endTime: tm ? `${pad(Math.min(23, +tm.slice(0, 2) + 1))}:${tm.slice(3)}` : '', allDay: !tm, deadline: $('#td-dl', root).classList.contains('on') });
+    save(); closeSheet(); render(); toast('고쳤어요');
+  };
+  actions.tdDel = () => { db.events = db.events.filter((x) => x.id !== e.id); save(); closeSheet(); render(); toast('삭제했어요'); };
+}
 function evMenu(e) {
   openSheet(`<div class="confirm-text">${esc(e.title)}</div><div class="confirm-sub">${isTimed(e) ? `${timeLabel(e.startTime)} – ${timeLabel(e.endTime)}` : fmtDate(e.start)}</div>
     <div class="actions"><button class="btn ghost" data-act="emEdit">수정</button><button class="btn danger" data-act="emDel">삭제</button></div>`, { center: true });
@@ -2008,6 +2070,7 @@ const LONG = {
     actions.galNameSave = () => { db.settings = { ...(db.settings || {}), galleryName: $('#gal-name', root).value.trim() || '갤러리' }; save(); closeSheet(); render(); };
   },
   square: () => { S.weekStart = weekOf(todayStr()); S.quickAdd = false; go('weekly'); }, // □ 꾹 → WEEKLY
+  todoEdit: (el) => { const e = db.events.find((x) => x.id === el.dataset.id); if (e) todoSheet(e); },
   goal: (el) => { const g = db.goals.find((x) => x.id === el.dataset.id); if (!g) return;
     confirmSheet('이 목표를 지울까요?', esc(g.text), '지우기', () => { db.goals = db.goals.filter((x) => x.id !== g.id); save(); render(); }, true); },
   bars: () => go('split', { sel: todayStr() }), // ||| 꾹 → 화면 ⑨
@@ -2055,7 +2118,7 @@ document.addEventListener('submit', (e) => {
   const kind = f.dataset.form; const input = f.querySelector('input'); const v = input ? input.value.trim() : '';
   if (kind === 'photoCmt') {
     const g = db.gallery.find((x) => x.id === S.photoId);
-    if (g && v) { g.comments = [...(g.comments || []), { id: uid(), by: ME, text: v, at: Date.now() }]; if (g.owner !== ME) notify('photo', `${me().name}님이 사진에 댓글을 달았어요: ${v}`); save(); render(false, false); }
+    if (g && v) { g.comments = [...(g.comments || []), { id: uid(), by: ME, text: v, at: Date.now() }]; if (g.owner !== ME) notify('photo', `${me().name}님이 사진에 댓글을 달았어요: ${v}`); save(); render(false, false); if ($('#pc-input')) photoComments(); }
     return;
   }
   if (kind === 'goalAdd') {
@@ -2098,6 +2161,7 @@ render();
 loadWeather();
 showPokes();
 receiveShared();
+deadlineReminder();
 if (window.nneowCloud) {
   window.nneowCloud.start({
     getDb: () => db,

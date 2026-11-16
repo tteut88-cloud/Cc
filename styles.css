@@ -868,3 +868,27 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .poke-hand img { width: 64px; height: 64px; object-fit: contain; display: inline-block; }
 .quick-time { width: 112px !important; flex: 0 0 112px; font-size: .85em !important; }
 .quick-form { gap: 5px; }
+
+/* ===== v22 ===== */
+/* ② 일정 글자: 말줄임표 없이 보이는 데까지만 */
+.bar { text-overflow: clip; }
+/* ② ‹ 날짜 › 가깝게 */
+.month-head { grid-template-columns: 56px 1fr 56px; }
+.mh-center { display: flex; align-items: center; justify-content: center; gap: 2px; }
+.mh-center .icon-btn { width: 34px; height: 40px; }
+.mh-center .month-title { padding: 8px 4px; }
+/* ① 할 일 | 시간설정 */
+.qt { position: relative; flex: 0 0 96px; height: 34px; border-radius: 10px; background: var(--soft); display: block; overflow: hidden; }
+.qt span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .82em; font-weight: 600; color: var(--muted); pointer-events: none; }
+.qt input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; background: transparent; padding: 0 6px; font-size: .85em; }
+.qt.has span { display: none; }
+.qt.has input { opacity: 1; }
+/* 알림 설정 */
+.np { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.np b { font-weight: 600; }
+.np small { font-size: .74em; color: var(--muted); font-weight: 500; }
+/* 갤러리 사진 보기 */
+.pv-actions { gap: 4px; }
+.pv-count { flex: 1; text-align: center; font-size: .9em; font-weight: 700; padding: 10px 0; border-radius: 10px; }
+.pv-count:active { background: var(--soft); }
+.ev small.nt { white-space: normal; line-height: 1.25; }
