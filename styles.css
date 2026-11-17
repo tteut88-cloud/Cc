@@ -1015,3 +1015,31 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .ev small, .ev small.nt { white-space: nowrap; overflow: hidden; }
 .ev { padding: 4px 6px; }
 .ev small, .ev small.nt { text-overflow: clip; }
+
+/* ===== v35 ===== */
+@font-face { font-family: "PeoplefirstNeatLoud"; font-display: swap; src: url("assets/fonts/PeoplefirstNeatLoud.ttf") format("truetype"); }
+/* 교환 메모 */
+.mt-count { font-size: .82em; color: var(--muted); font-weight: 600; }
+.sw-snip { font-size: .84em; color: var(--muted); margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.sw-tile .sw-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 5px; font-size: .72em; font-weight: 700; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.55)); white-space: nowrap; overflow: hidden; text-align: left; }
+/* 화면 (11) */
+.diary .topbar h1 { font-size: 1em; }
+.dt-nav button[disabled] { opacity: .25; pointer-events: none; }
+#diary-body { padding: 14px 18px 30px; }
+.dy-photos { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc((100% - 3 * 31% - 16px) / 2); }
+.dy-photos::-webkit-scrollbar { display: none; }
+.dy-photos .dy-ph { flex: 0 0 31%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; scroll-snap-align: center; }
+.dy-photos.one { justify-content: center; padding: 0; }
+.dy-photos.one .dy-ph { flex: 0 0 62%; }
+.dy-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dy-title { margin: 18px 0 6px; font-size: 1.15em; }
+.dy-text { line-height: 1.75; white-space: pre-wrap; word-break: break-word; margin-top: 8px; }
+.dy-text.muted { color: var(--muted); font-size: .9em; }
+.dy-meta { margin-top: 14px; font-size: .78em; color: var(--muted); }
+.dy-actions { padding: 12px 0 0; margin-top: 8px; border-top: 1px solid var(--line); }
+.dy-heart.on { color: #ff4d7d; }
+.dy-heart.on .ico { fill: #ff4d7d; }
+.heart-pop { position: absolute; left: 50%; top: 45%; width: 96px; height: 96px; margin: -48px 0 0 -48px; color: #ff4d7d; opacity: 0; pointer-events: none; z-index: 20; }
+.heart-pop .ico { width: 96px; height: 96px; fill: #ff4d7d; stroke: none; }
+.heart-pop.go { animation: heartpop .9s ease forwards; }
+@keyframes heartpop { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; transform: scale(1.15); } 45% { transform: scale(.95); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1) translateY(-30px); } }

@@ -348,6 +348,7 @@ let bumpSmile = false; let renderQuiet = false;
 const FONTS = {
   wanted: { label: 'Wanted Sans', css: '"Wanted Sans Variable", "Wanted Sans", -apple-system, "Apple SD Gothic Neo", sans-serif' },
   busan: { label: '부산단디명조', css: '"BusanDandiMyeongjoL", "Nanum Myeongjo", "AppleMyungjo", serif' },
+  ttobak: { label: '피플퍼스트 또박', css: '"PeoplefirstNeatLoud", "Apple SD Gothic Neo", sans-serif' },
   himchan: { label: '인천교육힘찬', css: '"IncheonHimchan", "Apple SD Gothic Neo", sans-serif' },
 };
 const THEMES = { light: '화이트', pink: '핑크', cream: '크림', dark: '다크' };
@@ -367,14 +368,14 @@ applyPrefs();
 function go(screen, opts = {}) {
   Object.assign(S, opts);
   S.screen = screen;
-  history.pushState({ screen, sel: S.sel, memoId: S.memoId, photoId: S.photoId }, '');
+  history.pushState({ screen, sel: S.sel, memoId: S.memoId, photoId: S.photoId, diaryDate: S.diaryDate }, '');
   render(true);
 }
 function back() { history.back(); }
 window.addEventListener('popstate', (e) => {
   closeSheet();
   const st = e.state || { screen: 'list' };
-  S.screen = st.screen; if (st.sel) S.sel = st.sel; if (st.memoId) S.memoId = st.memoId; if (st.photoId) S.photoId = st.photoId;
+  S.screen = st.screen; if (st.sel) S.sel = st.sel; if (st.memoId) S.memoId = st.memoId; if (st.photoId) S.photoId = st.photoId; if (st.diaryDate) S.diaryDate = st.diaryDate;
   S.rangeStart = null; S.rangeEnd = null;
   render(true);
 });
@@ -393,7 +394,7 @@ function render(scrollTop, keepInput) {
   const fn = SCREENS[S.screen] || SCREENS.list;
   app.innerHTML = fn();
   after[S.screen] && after[S.screen](scrollTop);
-  try { sessionStorage.setItem('nneow.nav', JSON.stringify({ screen: S.screen, sel: S.sel, memoId: S.memoId, photoId: S.photoId, month: S.month, viewPartner: S.viewPartner, photoMode: S.photoMode, memoTab: S.memoTab, weekStart: S.weekStart, galFilter: S.galFilter })); } catch { /* 무시 */ }
+  try { sessionStorage.setItem('nneow.nav', JSON.stringify({ screen: S.screen, sel: S.sel, memoId: S.memoId, photoId: S.photoId, month: S.month, viewPartner: S.viewPartner, photoMode: S.photoMode, memoTab: S.memoTab, diaryDate: S.diaryDate, weekStart: S.weekStart, galFilter: S.galFilter })); } catch { /* 무시 */ }
   if (keepInput && S.screen !== 'inbox' && S.screen !== 'memo') { const n = $('.scroll', app); if (n) n.scrollTop = top; }
   if (keep && keep.sel) { const n = $(keep.sel); if (n) { n.value = keep.v; n.focus(); } }
 }
@@ -513,6 +514,8 @@ const HOL_LUNAR = { // 음력 공휴일 (설날·부처님오신날·추석)
   '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-05-13': '부처님오신날', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
 };
 const HOLIDAYS = (s) => HOL_LUNAR[s] || HOL_FIXED[s.slice(5)] || '';
+const PUBLIC_HOL = ['신정', '삼일절', '어린이날', '현충일', '광복절', '개천절', '한글날', '크리스마스', '설날', '설날 연휴', '추석', '추석 연휴', '부처님오신날'];
+const isPublicHoliday = (s) => PUBLIC_HOL.includes(HOLIDAYS(s)); // 빨간 날
 
 /* ---------- ② 월 달력 ---------- */
 const BAR_TOP = 37, BAR_STEP = 19, MAX_LANES = 4; // 일정 막대: 4개까지 같은 두께로
@@ -544,7 +547,7 @@ SCREENS.month = () => {
     const blocked = S.placing && !out && hasEventOn(YOU, s);
     const inRange = !out && r0 && s >= r0 && s <= r1;
     return `
-        <div class="cell ${i === 0 ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol && !S.photoMode ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
+        <div class="cell ${i === 0 || (!out && isPublicHoliday(s)) ? 'sun' : ''} ${out ? 'out' : ''} ${wrap ? 'wrap' : ''} ${rainy ? 'rainy' : ''} ${hol && !S.photoMode ? 'has-hol' : ''} ${s === t ? 'today' : ''} ${inRange ? 'in-range' : ''} ${S.photoMode ? 'pmode' : ''} ${blocked ? 'blocked' : ''} ${S.placing && !blocked ? 'placeable' : ''}"
              data-act="day" data-lp="range" data-date="${s}">
           <div class="num-wrap">${rainy ? '<span class="rainbox"></span>' : ''}<span class="num">${d.getDate()}</span></div>
           ${memoCol ? `<span class="memo-bar" style="--c:${memoCol}"></span>` : ''}
@@ -850,9 +853,9 @@ function memoPadHTML() {
 }
 SCREENS.memo = () => `
   <section class="screen">
-    ${topbar('메모', S.memoTab === 'share' ? '<button class="poke-finger" data-act="poke" aria-label="콕 찌르기"><img src="assets/icons/poke.png" alt="" /></button>' : '')}
-    <div class="memo-tabs"><button data-act="memoTab" data-v="all" class="${S.memoTab === 'all' ? 'on' : ''}">메모 모아보기</button><button data-act="memoTab" data-v="share" class="${S.memoTab === 'share' ? 'on' : ''}">메모 나누기</button></div>
-    ${S.memoTab === 'share' ? memoPadHTML() : memoAllHTML()}
+    ${topbar('메모', '<button class="poke-finger" data-act="poke" aria-label="콕 찌르기"><img src="assets/icons/poke.png" alt="" /></button>')}
+    <div class="memo-tabs"><button data-act="memoTab" data-v="all" class="${S.memoTab !== 'swap' ? 'on' : ''}">메모 모음</button><button data-act="memoTab" data-v="swap" class="${S.memoTab === 'swap' ? 'on' : ''}">교환 메모</button></div>
+    ${S.memoTab === 'swap' ? swapMemoHTML() : memoAllHTML()}
   </section>`;
 after.memo = () => {
   if (S.memoTab !== 'share') return;
@@ -1570,18 +1573,89 @@ function dayPhotoMenu(id, s) {
   actions.dpRep = () => { const arr = [g, ...list.filter((x) => x.id !== id)]; arr.forEach((x, k) => { x.ord = k; }); save(); closeSheet(); render(); photoDay(s); };
 }
 /* 사진 캘린더에서 날짜 꾹 → 사진 제목 (한 칸) */
-const dayTitle = (s) => { const l = db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at); return l.length ? l[l.length - 1].text : ''; };
+const dayEntry = (s) => { const l = db.dayNotes.filter((x) => x.date === s).sort((a, b) => a.at - b.at); return l[l.length - 1] || null; };
+const dayTitle = (s) => { const e = dayEntry(s); return e ? (e.text || '') : ''; };
+/* 갤러리 캘린더에서 날짜 꾹 → 제목 + 메모 (제목은 칸 윗줄, 메모는 '교환 메모'에서) */
 function dayNoteSheet(s) {
-  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)} 사진 제목</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
-    <div class="field"><input id="dn-text" maxlength="20" value="${esc(dayTitle(s))}" placeholder="사진 제목" enterkeyhint="done" /></div>`,
+  const e = dayEntry(s);
+  openSheet(`<div class="sheet-head"><button class="icon-btn" data-act="close">${ICON.x}</button><h3>${fmtDate(s)}</h3><button class="icon-btn" data-act="dnSave">${ICON.check}</button></div>
+    <div class="field"><label>제목</label><input id="dn-text" maxlength="20" value="${esc(e ? e.text || '' : '')}" placeholder="사진 제목" enterkeyhint="next" /></div>
+    <div class="field"><label>메모</label><textarea id="dn-memo" rows="6" placeholder="이 날의 이야기를 남겨보세요">${esc(e ? e.memo || '' : '')}</textarea></div>`,
   { bind: (sh) => setTimeout(() => { const i = $('#dn-text', sh); if (!i) return; i.focus(); i.setSelectionRange(i.value.length, i.value.length);
-    i.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); actions.dnSave(); } }); }, 250) });
+    i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !ev.isComposing) { ev.preventDefault(); $('#dn-memo', sh).focus(); } }); }, 250) });
   actions.dnSave = () => {
-    const t = ($('#dn-text', root) || {}).value; if (t == null) return;
-    db.dayNotes = db.dayNotes.filter((x) => x.date !== s); // 하루에 제목 하나
-    if (t.trim()) db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t.trim(), at: Date.now() });
+    const t = (($('#dn-text', root) || {}).value || '').trim(); const m = (($('#dn-memo', root) || {}).value || '').trim();
+    const cur = dayEntry(s);
+    db.dayNotes = db.dayNotes.filter((x) => x.date !== s || x === cur); // 하루에 하나
+    if (!t && !m) { db.dayNotes = db.dayNotes.filter((x) => x !== cur); }
+    else if (cur) { Object.assign(cur, { text: t, memo: m, editedAt: Date.now() }); }
+    else { db.dayNotes.push({ id: uid(), owner: ME, date: s, text: t, memo: m, at: Date.now(), likes: {}, comments: [] }); if (m) notify('memo', `${me().name}님이 ${fmtDate(s)} 교환 메모를 남겼어요`); }
     save(); closeSheet(); render();
   };
+}
+
+/* ---------- 교환 메모: 갤러리 캘린더에서 쓴 메모들 ---------- */
+const diaryEntries = () => db.dayNotes.filter((x) => x.text || x.memo).sort((a, b) => b.date.localeCompare(a.date));
+function swapMemoHTML() {
+  const list = diaryEntries();
+  const tools = `<div class="memo-tools"><span class="mt-count">${list.length}개의 교환 메모</span>
+    <div class="viewtog"><button data-act="memoView" data-v="list" class="${S.memoView === 'list' ? 'on' : ''}" aria-label="목록">${ICON.list}</button><button data-act="memoView" data-v="grid" class="${S.memoView === 'grid' ? 'on' : ''}" aria-label="바둑판">${ICON.grid}</button></div></div>`;
+  if (!list.length) return `${tools}<div class="scroll"><div class="empty">갤러리 캘린더에서 날짜를 꾹 눌러<br/>제목과 메모를 남겨보세요</div></div>`;
+  const ph = (x) => photosOn(x.date)[0];
+  const body = S.memoView === 'grid'
+    ? `<div class="memo-grid">${list.map((x) => { const p = ph(x); return `<button class="mg-item sw-tile" style="--c:${db.users[x.owner].colors.memo}" data-act="openDiary" data-date="${x.date}">
+        ${p ? `<img src="${p.img}" alt="" />` : `<span class="mg-text">${esc(x.memo || x.text)}</span>`}
+        <span class="sw-cap">${esc(x.text || fmtDate(x.date))}</span></button>`; }).join('')}</div>`
+    : `<div class="memo-list">${list.map((x) => { const p = ph(x); return `<div class="ml-wrap" style="--c:${db.users[x.owner].colors.memo}"><button class="ml-item" data-act="openDiary" data-date="${x.date}">
+        <span class="ml-bar"></span>
+        <div class="ml-body"><div class="ml-text">${esc(x.text || fmtDate(x.date))}</div>
+        ${x.memo ? `<div class="sw-snip">${esc(x.memo)}</div>` : ''}
+        <div class="ml-sub">${fmtDate(x.date)} · ${esc(whoName(x.owner))}${(x.comments || []).length ? ` · 댓글 ${x.comments.length}` : ''}</div></div>
+        ${p ? `<img class="ml-img" src="${p.img}" alt="" />` : ''}</button></div>`; }).join('')}</div>`;
+  return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:40px"></div></div>`;
+}
+
+/* ---------- 화면 (11): 교환 메모 크게 보기 — 날짜 / 사진 / 줄글 / 하트·댓글·좋아요 ---------- */
+SCREENS.diary = () => {
+  const all = diaryEntries().slice().reverse(); // 날짜 오름차순
+  const x = all.find((y) => y.date === S.diaryDate) || all[all.length - 1];
+  if (!x) return `<section class="screen">${topbar('교환 메모')}<div class="empty">교환 메모가 없어요</div></section>`;
+  S.diaryDate = x.date;
+  const i = all.indexOf(x); const prev = all[i - 1], next = all[i + 1];
+  const photos = photosOn(x.date);
+  const likes = Object.values(x.likes || {}).filter(Boolean).length; const liked = !!(x.likes && x.likes[ME]);
+  const cs = x.comments || [];
+  return `<section class="screen diary">
+    ${topbar(`<span class="dt-nav"><button data-act="diaryGo" data-date="${prev ? prev.date : ''}" ${prev ? '' : 'disabled'} aria-label="이전 메모">${ICON.left}</button><span class="dt-btn">${fmtDate(x.date)}</span><button data-act="diaryGo" data-date="${next ? next.date : ''}" ${next ? '' : 'disabled'} aria-label="다음 메모">${ICON.right}</button></span>`,
+      `<button class="icon-btn" data-act="diaryEdit" aria-label="수정">${ICON.dots}</button>`)}
+    <div class="scroll" id="diary-body">
+      ${photos.length ? `<div class="dy-photos ${photos.length === 1 ? 'one' : ''}">${photos.map((g) => `<button class="dy-ph" data-act="openPhoto" data-id="${g.id}"><img src="${g.img}" alt="" /></button>`).join('')}</div>` : ''}
+      ${x.text ? `<h2 class="dy-title">${esc(x.text)}</h2>` : ''}
+      ${x.memo ? `<div class="dy-text">${esc(x.memo)}</div>` : '<div class="dy-text muted">메모가 없어요. 오른쪽 위 점 세 개로 적을 수 있어요</div>'}
+      <div class="dy-meta">${esc(whoName(x.owner))}${x.editedAt ? ' · 수정됨' : ''}</div>
+      <div class="pv-actions dy-actions">
+        <button class="pv-like dy-heart ${liked ? 'on' : ''}" data-act="diaryLike" aria-label="하트">${ICON.heart}</button>
+        <button class="pv-count" data-act="diaryComments">댓글 ${cs.length}개 · 좋아요 ${likes}개</button>
+      </div>
+    </div>
+    <div class="heart-pop" id="heart-pop">${ICON.heart}</div>
+  </section>`;
+};
+after.diary = () => {
+  const body = $('#diary-body'); let sx = 0, sy = 0;
+  body.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  body.addEventListener('touchend', (e) => { // 좌우로 밀면 이전/다음 메모
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > 50 || e.target.closest('.dy-photos')) return;
+    const b = $(`[data-act=diaryGo]:${dx < 0 ? 'last-of-type' : 'first-of-type'}`); if (b && b.dataset.date) { S.diaryDate = b.dataset.date; history.replaceState({ screen: 'diary', diaryDate: S.diaryDate }, ''); render(); }
+  });
+};
+function diaryComments() {
+  const x = dayEntry(S.diaryDate); if (!x) return; const cs = x.comments || [];
+  openSheet(`<div class="sheet-head"><span></span><h3>댓글 ${cs.length}개</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    <div class="pv-comments">${cs.map((c) => `<div class="cm"><b>${esc(whoName(c.by))}</b><span>${esc(c.text)}</span><em>${ago(c.at)}</em></div>`).join('') || '<div class="empty" style="padding:16px 0">첫 댓글을 남겨보세요</div>'}</div>
+    <form class="composer pv-form" data-form="diaryCmt"><input name="text" id="dc-input" placeholder="댓글 달기" autocomplete="off" enterkeyhint="send" /><button class="icon-btn send" type="submit" aria-label="보내기">${ICON.send}</button></form>`,
+  { bind: (sh) => setTimeout(() => { const i = $('#dc-input', sh); if (i) i.focus(); }, 250) });
 }
 /* 휴대폰 갤러리 '공유 → nneow' 로 받은 사진 */
 async function receiveShared() {
@@ -1975,6 +2049,17 @@ const actions = {
     toast('저장했어요'); back();
   },
   dayMemos: (el) => dayMemosSheet(el.dataset.date),
+  openDiary: (el) => go('diary', { diaryDate: el.dataset.date }),
+  diaryGo: (el) => { if (!el.dataset.date) return; S.diaryDate = el.dataset.date; history.replaceState({ screen: 'diary', diaryDate: S.diaryDate }, ''); render(); },
+  diaryEdit: () => dayNoteSheet(S.diaryDate),
+  diaryLike: () => {
+    const x = dayEntry(S.diaryDate); if (!x) return;
+    x.likes = { ...(x.likes || {}), [ME]: !(x.likes && x.likes[ME]) };
+    if (x.likes[ME] && x.owner !== ME) notify('memo', `${me().name}님이 교환 메모에 하트를 눌렀어요`);
+    save(); render(false, true);
+    if (x.likes[ME]) { const h = $('#heart-pop'); if (h) { h.classList.remove('go'); void h.offsetWidth; h.classList.add('go'); } } // 하트 띄우기
+  },
+  diaryComments: () => diaryComments(),
   replyComment: (el) => { const m = db.memos.find((x) => x.id === el.dataset.mid); const c = m && (m.comments || []).find((x) => x.id === el.dataset.cid); if (c) commentSheet(m, c); },
   gotoNotice: (el) => { const r = $('#pr-' + el.dataset.id); if (r) { r.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.classList.add('flash'); setTimeout(() => r.classList.remove('flash'), 1200); } },
   unpin: (el) => { const m = db.memos.find((x) => x.id === el.dataset.id); if (m) { m.pinnedAt = null; save(); render(false, true); } },
@@ -2237,6 +2322,11 @@ document.addEventListener('submit', (e) => {
   const f = e.target.closest('[data-form]'); if (!f) return;
   e.preventDefault();
   const kind = f.dataset.form; const input = f.querySelector('input'); const v = input ? input.value.trim() : '';
+  if (kind === 'diaryCmt') {
+    const x = dayEntry(S.diaryDate);
+    if (x && v) { x.comments = [...(x.comments || []), { id: uid(), by: ME, text: v, at: Date.now() }]; if (x.owner !== ME) notify('memo', `${me().name}님이 교환 메모에 댓글을 달았어요: ${v}`); save(); render(false, false); diaryComments(); }
+    return;
+  }
   if (kind === 'photoCmt') {
     const g = db.gallery.find((x) => x.id === S.photoId);
     if (g && v) { g.comments = [...(g.comments || []), { id: uid(), by: ME, text: v, at: Date.now() }]; if (g.owner !== ME) notify('photo', `${me().name}님이 사진에 댓글을 달았어요: ${v}`); save(); render(false, false); if ($('#pc-input')) photoComments(); }
