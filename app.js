@@ -253,7 +253,9 @@ function visibleDeadlines(owner = S.viewPartner ? YOU : ME) {
 }
 const myMemos = () => db.memos.filter((m) => !m.chat && (m.owner === ME || m.toPartner));
 const memosOn = (s) => myMemos().filter((m) => m.date === s);
-const unreadMemos = () => db.notifs.filter((n) => n.to === ME && n.type === 'memo' && !n.read).length;
+const MEMO_NOTIF = ['memo', 'note'];
+const memoNotifs = () => db.notifs.filter((n) => n.to === ME && MEMO_NOTIF.includes(n.type)).sort((a, b) => b.at - a.at);
+const unreadMemos = () => memoNotifs().filter((n) => !n.read).length;
 /* ① LIST = 오늘 일정 (내 일정 + 상대가 공유한 일정). 완료 체크는 사람마다 따로 */
 const isDone = (e, who) => !!(e.doneBy && e.doneBy[who]);
 function listToday(who) {
@@ -821,7 +823,7 @@ function memoAllHTML() {
         ${m.image ? `<img class="ml-img" src="${m.image}" alt="" />` : ''}</button>
         ${(m.comments || []).length ? `<div class="ml-comments">${commentsHTML(m)}</div>` : ''}</div>`).join('')}</div>`;
   return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:90px"></div></div>
-    <button class="fab" data-act="composeMemo" aria-label="메모 쓰기">${ICON.plus}</button>`;
+    ${checkFab()}<button class="fab" data-act="composeMemo" aria-label="메모 쓰기">${ICON.plus}</button>`;
 }
 function memoPadHTML() {
   const list = db.memos.filter((m) => m.chat).slice().sort((a, b) => a.createdAt - b.createdAt); // 나누기 = 대화만
@@ -1239,7 +1241,7 @@ function openSheet(html, { center = false, full = false, bind } = {}) {
 function closeSheet() {
   root.innerHTML = ''; sheetBind = null;
   $$('.sday.pending').forEach((el) => el.classList.remove('pending'));
-  if (renderQuiet) { renderQuiet = false; render(false, true); }
+  if (renderQuiet || S.screen === 'memo') { renderQuiet = false; render(false, true); }
   setTimeout(showPokes, 0);
 }
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -1594,6 +1596,19 @@ function dayNoteSheet(s) {
   };
 }
 
+/* ---------- 메모 알림 확인 (＋ 옆 ✓) ---------- */
+const checkFab = (alone) => { const n = unreadMemos(); return `<button class="fab fab-check ${alone ? 'alone' : ''}" data-act="memoAlerts" aria-label="메모 알림 확인">${ICON.check}${n ? `<span class="badge">${n > 99 ? '99+' : n}</span>` : ''}</button>`; };
+function memoAlertsSheet() {
+  const list = memoNotifs().slice(0, 50);
+  openSheet(`<div class="sheet-head"><span></span><h3>메모 알림</h3><button class="icon-btn" data-act="close">${ICON.x}</button></div>
+    ${list.length ? `<div class="na-list">${list.map((n) => `<div class="na-item ${n.read ? '' : 'new'}"><span class="na-dot"></span><div><div class="na-t">${esc(n.text)}</div><div class="na-s">${ago(n.at)}</div></div></div>`).join('')}</div>` : '<div class="empty" style="padding:24px 0">새 메모 알림이 없어요</div>'}`, {
+    bind: () => { // 확인했으니 읽음 처리 → 메모 아이콘 위 숫자 사라짐
+      let ch = false; db.notifs.forEach((n) => { if (n.to === ME && MEMO_NOTIF.includes(n.type) && !n.read) { n.read = true; ch = true; } });
+      if (ch) save();
+    },
+  });
+}
+
 /* ---------- 교환 메모: 갤러리 캘린더에서 쓴 메모들 ---------- */
 const diaryEntries = () => db.dayNotes.filter((x) => x.text || x.memo).sort((a, b) => b.date.localeCompare(a.date));
 function swapMemoHTML() {
@@ -1612,7 +1627,7 @@ function swapMemoHTML() {
         ${x.memo ? `<div class="sw-snip">${esc(x.memo)}</div>` : ''}
         <div class="ml-sub">${fmtDate(x.date)} · ${esc(whoName(x.owner))}${(x.comments || []).length ? ` · 댓글 ${x.comments.length}` : ''}</div></div>
         ${p ? `<img class="ml-img" src="${p.img}" alt="" />` : ''}</button></div>`; }).join('')}</div>`;
-  return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:40px"></div></div>`;
+  return `${tools}<div class="scroll" id="memo-scroll">${body}<div style="height:90px"></div></div>${checkFab(true)}`;
 }
 
 /* ---------- 화면 (11): 교환 메모 크게 보기 — 날짜 / 사진 / 줄글 / 하트·댓글·좋아요 ---------- */
@@ -2049,6 +2064,7 @@ const actions = {
     toast('저장했어요'); back();
   },
   dayMemos: (el) => dayMemosSheet(el.dataset.date),
+  memoAlerts: () => memoAlertsSheet(),
   openDiary: (el) => go('diary', { diaryDate: el.dataset.date }),
   diaryGo: (el) => { if (!el.dataset.date) return; S.diaryDate = el.dataset.date; history.replaceState({ screen: 'diary', diaryDate: S.diaryDate }, ''); render(); },
   diaryEdit: () => dayNoteSheet(S.diaryDate),

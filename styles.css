@@ -1043,3 +1043,16 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .heart-pop .ico { width: 96px; height: 96px; fill: #ff4d7d; stroke: none; }
 .heart-pop.go { animation: heartpop .9s ease forwards; }
 @keyframes heartpop { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; transform: scale(1.15); } 45% { transform: scale(.95); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1) translateY(-30px); } }
+
+/* 메모창 ＋ 옆 ✓ (메모 알림) */
+.fab-check { right: 84px; background: var(--surface); color: var(--fg); border: 1.5px solid var(--line-strong); }
+.fab-check.alone { right: 18px; }
+.fab-check .ico { stroke-width: 2.6; }
+.fab-check .badge { top: -2px; right: -2px; }
+.na-list { display: flex; flex-direction: column; gap: 4px; max-height: 60dvh; overflow-y: auto; }
+.na-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+.na-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: transparent; }
+.na-item.new .na-dot { background: var(--accent); }
+.na-item.new .na-t { font-weight: 700; }
+.na-t { font-size: .92em; word-break: break-word; }
+.na-s { font-size: .74em; color: var(--muted); margin-top: 2px; }
